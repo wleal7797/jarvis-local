@@ -1,0 +1,57 @@
+# ---------- Privacidad: nunca subir ----------
+.env
+.env.*
+!.env.example
+data/
+models/
+*.gguf
+*.safetensors
+*.bin
+*.pt
+*.onnx
+*.tflite
+*.wav
+*.mp3
+*.webm
+*.ogg
+*.dump
+*.sql.gz
+backups/
+secrets/
+caddy/data/
+caddy/config/
+
+# ---------- Entrenamiento ----------
+training/outputs/
+training/checkpoints/
+training/datasets/*.jsonl
+training/.venv/
+wandb/
+
+# ---------- Python ----------
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+dist/
+build/
+
+# ---------- Notebooks ----------
+.ipynb_checkpoints/
+
+# ---------- Sistema y editores ----------
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+logs/
+*.log
