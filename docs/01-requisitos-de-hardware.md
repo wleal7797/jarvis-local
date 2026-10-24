@@ -15,13 +15,13 @@ Procesador: Intel Core i5‑10300H (4 núcleos / 8 hilos).
 
 ## 1. RAM y VRAM con JARVIS completo funcionando
 
-Valores aproximados medidos para la configuración elegida (modelo `qwen3:4b` cuantizado Q4_K_M, contexto de 8 000 tokens).
+Valores aproximados medidos para la configuración elegida (modelo `qwen3:4b-instruct` cuantizado Q4_K_M, contexto de 8 000 tokens).
 
 | Componente | RAM | VRAM | ¿Siempre activo? |
 |---|---|---|---|
 | Windows 11 + navegador con la app abierta | 3,0 – 3,5 GB | 0,3 GB | Sí |
 | Docker Desktop (WSL2) + PostgreSQL + pgvector | 1,0 – 1,5 GB (lo limitamos a 2 GB) | — | Sí |
-| Ollama + `qwen3:4b` (modelo de chat) | 0,5 GB | 3,0 – 3,5 GB | Mientras conversas (se descarga tras 5 min sin uso) |
+| Ollama + `qwen3:4b-instruct` (modelo de chat) | 0,5 GB | 3,0 – 3,5 GB | Mientras conversas (se descarga tras 5 min sin uso) |
 | Ollama + `bge-m3` (embeddings, en CPU) | 1,2 GB | — | Al buscar o indexar |
 | API FastAPI + worker de ingesta | 0,3 – 0,5 GB | — | Sí |
 | `faster-whisper small` (voz → texto, CPU int8) | 0,6 GB | — | Al hablar |
@@ -70,10 +70,22 @@ Cálculo para `qwen3:4b` (36 capas, 8 cabezas KV de 128 dimensiones) con la cach
 
 Se configura con la variable `OLLAMA_CONTEXT_LENGTH=8192`.
 
+### Rendimiento medido en este equipo (2026‑10‑24)
+
+| Configuración | En GPU | Velocidad | Primera respuesta* |
+|---|---|---|---|
+| `qwen3:4b` con el margen por defecto (1 GB) | 64 % | 9,5 tokens/s | 214 s (además "piensa" en inglés) |
+| `qwen3:4b-instruct`, margen 256 MB, contexto 8192 | 88 % | **40,6 tokens/s** | 6,9 s |
+| `qwen3:4b-instruct`, margen 256 MB, contexto 4096 | 100 % | 44,7 tokens/s | 6,0 s |
+
+\*Incluye cargar el modelo en memoria; las preguntas siguientes son más rápidas.
+Se eligió **8192**: el doble de memoria de conversación a cambio de sólo un 10 % de velocidad.
+Edge, Discord y otras apps con aceleración gráfica ocupan ≈ 0,8 GB de VRAM. Cerrarlas libera espacio para el modelo.
+
 ### Cómo ahorramos memoria (decisiones de diseño)
 
 1. **Un solo modelo de chat cargado a la vez** y descarga automática tras 5 min sin uso (`OLLAMA_KEEP_ALIVE=5m`).
-2. **Caché de contexto comprimida** en la GPU (`OLLAMA_KV_CACHE_TYPE=q8_0`, `OLLAMA_FLASH_ATTENTION=1`).
+2. **Caché de contexto comprimida** en la GPU (`OLLAMA_KV_CACHE_TYPE=q8_0`, `OLLAMA_FLASH_ATTENTION=1`) y margen de VRAM reducido (`LLAMA_ARG_FIT_TARGET=256`).
 3. **Embeddings en CPU** (`num_gpu: 0` en la petición) para no pelear con el modelo de chat.
 4. **WSL2 limitado a 2 GB** con el archivo `.wslconfig` (ver [instalación](04-instalacion-paso-a-paso.md)).
 5. **Sin Redis ni Celery**: la cola de tareas vive en PostgreSQL (`ingestion_jobs` con `FOR UPDATE SKIP LOCKED`).

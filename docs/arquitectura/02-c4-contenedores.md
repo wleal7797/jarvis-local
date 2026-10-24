@@ -17,7 +17,7 @@ C4Container
     Container(api, "API JARVIS", "Python 3.12, FastAPI", "Controladores MVC, servicios, voz a texto y texto a voz")
     Container(worker, "Worker de ingesta", "Python", "Descarga, divide y vectoriza documentos en segundo plano")
     Container(agent, "Agente de voz", "Python, openWakeWord", "Escucha 'hey jarvis' en el micrófono del PC")
-    Container(ollama, "Servidor de modelos", "Ollama", "qwen3:4b en GPU y bge-m3 en CPU")
+    Container(ollama, "Servidor de modelos", "Ollama", "qwen3:4b-instruct en GPU y bge-m3 en CPU")
     ContainerDb(db, "Base de datos", "PostgreSQL 17 + pgvector, Docker", "Usuarios, conversaciones, documentos, vectores y entrenamiento")
     ContainerDb(fs, "Disco", "Sistema de archivos", "Datos en bruto, audios, GGUF, datasets y copias")
   }
