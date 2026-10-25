@@ -4,6 +4,8 @@ Arranque en desarrollo:
     .venv\\Scripts\\python -m app
 """
 
+import asyncio
+import contextlib
 import logging
 import time
 from collections.abc import AsyncIterator
@@ -18,10 +20,12 @@ from app.controllers import (
     health_controller,
     knowledge_controller,
     page_controller,
+    voice_controller,
 )
 from app.core.config import get_settings
 from app.core.database import create_engine, create_session_factory
 from app.core.logging import setup_logging
+from app.services.stt_service import FasterWhisperSTT, WhisperSettings
 
 logger = logging.getLogger("jarvis")
 
@@ -33,8 +37,22 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     # El motor no se conecta todavía: abre conexiones cuando se usan por primera vez.
     app.state.engine = create_engine(settings.database_url())
     app.state.session_factory = create_session_factory(app.state.engine)
+    # Whisper no se carga aquí: se carga la primera vez que alguien habla.
+    app.state.stt = FasterWhisperSTT(
+        WhisperSettings(
+            model=settings.stt_model,
+            language=settings.stt_language,
+            threads=settings.stt_threads,
+            initial_prompt=settings.stt_initial_prompt,
+            idle_unload_seconds=settings.stt_idle_unload_seconds,
+        )
+    )
+    stt_watcher = asyncio.create_task(app.state.stt.run_idle_watcher())
     logger.info("JARVIS iniciado", extra={"environment": settings.environment})
     yield
+    stt_watcher.cancel()
+    with contextlib.suppress(asyncio.CancelledError):
+        await stt_watcher
     await app.state.http.aclose()
     await app.state.engine.dispose()
     logger.info("JARVIS detenido")
@@ -76,6 +94,7 @@ def create_app() -> FastAPI:
     app.include_router(chat_controller.router)
     app.include_router(chat_controller.ws_router)
     app.include_router(knowledge_controller.router)
+    app.include_router(voice_controller.router)
     return app
 
 

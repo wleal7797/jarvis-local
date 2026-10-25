@@ -249,10 +249,10 @@
     });
   }
 
-  function sendMessage(text) {
+  function sendMessage(text, options) {
     const message = text.trim();
-    if (!message || state.busy || !state.connected) return;
-    addMessage("user", message);
+    if (!message || state.busy || !state.connected) return false;
+    addMessage("user", message, options && options.meta);
     if (!state.conversationId) els.title.textContent = message.slice(0, 60);
     startReply();
     setBusy(true);
@@ -260,7 +260,14 @@
     els.input.value = "";
     autoGrow();
     updateSendButton();
+    return true;
   }
+
+  // Para voice.js: enviar lo que se dijo por voz como un mensaje más.
+  window.JarvisChat = {
+    send: sendMessage,
+    isBusy: () => state.busy || !state.connected,
+  };
 
   // ---------- Conversaciones ----------
 

@@ -24,6 +24,7 @@ from app.services.health_service import DatabaseProbe, HealthService
 from app.services.ingestion import IngestionService
 from app.services.llm import LLMProvider, OllamaProvider
 from app.services.retrieval_service import RetrievalService, RetrievalSettings
+from app.services.stt_service import SpeechToText
 
 SettingsDep = Annotated[Settings, Depends(get_settings)]
 
@@ -139,3 +140,11 @@ def get_ingestion_service(settings: SettingsDep, factory: SessionFactoryDep) -> 
 
 
 IngestionServiceDep = Annotated[IngestionService, Depends(get_ingestion_service)]
+
+
+def get_stt(conn: HTTPConnection) -> SpeechToText:
+    """Whisper compartido (uno solo para toda la app: el modelo pesa ~250 MB en RAM)."""
+    return conn.app.state.stt
+
+
+SpeechToTextDep = Annotated[SpeechToText, Depends(get_stt)]

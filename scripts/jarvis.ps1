@@ -91,6 +91,16 @@ switch ($Accion) {
             Start-Process "$env:LOCALAPPDATA\Programs\Ollama\ollama app.exe"
             Start-Sleep -Seconds 4
         }
+        # Precarga el modelo de chat en la GPU (~10 s) para que la primera pregunta no espere.
+        Write-Paso "Cargando el modelo de chat en la GPU"
+        try {
+            $model = (Get-Content (Join-Path $root ".env") -ErrorAction SilentlyContinue | Where-Object { $_ -match "^OLLAMA_CHAT_MODEL=" }) -replace "^OLLAMA_CHAT_MODEL=", ""
+            if (-not $model) { $model = "jarvis:base" }
+            Invoke-RestMethod -Uri "http://127.0.0.1:11434/api/generate" -Method Post -TimeoutSec 120 `
+                -Body (@{ model = $model; keep_alive = "5m" } | ConvertTo-Json) -ContentType "application/json" | Out-Null
+        } catch {
+            Write-Host "   (no se pudo precargar: se cargará con la primera pregunta)" -ForegroundColor Yellow
+        }
         if (Get-ApiProcess) {
             Write-Paso "La API ya estaba encendida"
         } else {

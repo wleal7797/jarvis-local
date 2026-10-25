@@ -210,7 +210,7 @@ async def add_wikipedia(
 ):
     titles = [t.strip() for t in body.titles if t.strip()]
     if not titles and not body.category:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Indica títulos o una categoría")
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Indica títulos o una categoría")
     try:
         job = await service.enqueue_wikipedia(titles, body.category, body.limit, body.language)
     except IngestionError as exc:

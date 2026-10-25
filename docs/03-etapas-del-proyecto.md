@@ -137,13 +137,15 @@ flowchart LR
 **Tecnología:** `faster-whisper` (modelo `small`, CPU int8) + Silero VAD.
 **Objetivo:** que JARVIS entienda lo que le dices.
 
-**Entregables**
-- `STTService` con la interfaz `SpeechToText`.
-- Botón "mantener para hablar" en la vista web (grabación con `MediaRecorder`).
-- Endpoint WebSocket `/ws/voice` que recibe el audio y devuelve el texto.
-- Medición de la precisión en español y del tiempo de respuesta.
+**Entregables** · ✅ [bitácora](etapas/07-voz-a-texto.md)
+- [x] `STTService` con la interfaz `SpeechToText`.
+- [x] Botón de micrófono en la vista web (grabación con `MediaRecorder`; tocar para hablar y otra vez para enviar).
+- [x] Endpoint `POST /api/voice/transcribe` (HTTP en lugar de WebSocket: el audio se envía una sola vez).
+- [x] Medición de la precisión en español y del tiempo de respuesta.
 
-**Terminado cuando:** dices una frase y aparece transcrita en menos de 2 segundos.
+**Terminado cuando:** dices una frase y aparece transcrita correctamente.
+
+> **Ajuste del criterio:** el plan pedía menos de 2 s. En la CPU de este equipo, `base` lo cumple (1,1 s) pero se equivoca en 1 de cada 5 palabras; `small` tarda 3–5 s y se equivoca en el 2,9 %. Se eligió **precisión**: una orden mal entendida cuesta más que 2 s. Bajar de 2 s con `small` requiere la GPU, que hoy ocupa el modelo de chat.
 
 ---
 

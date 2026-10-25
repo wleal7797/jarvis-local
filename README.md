@@ -5,7 +5,7 @@
 
 > 🚧 **Proyecto en construcción.** Se desarrolla por etapas y cada una queda documentada en `docs/`.
 
-**Estado:** 🟡 Etapa 6 terminada: aprende de archivos, páginas web y Wikipedia desde el panel *Conocimiento*
+**Estado:** 🟡 Etapa 7 terminada: ya le puedes hablar (micrófono → faster-whisper → chat)
 
 ## Inicio rápido
 
@@ -98,7 +98,7 @@ flowchart LR
 | 4 | Vista web | ✅ [bitácora](docs/etapas/04-vista-web.md) |
 | 5 | Embeddings y RAG | ✅ [bitácora](docs/etapas/05-embeddings-rag.md) |
 | 6 | Ingesta de conocimiento externo | ✅ [bitácora](docs/etapas/06-ingesta.md) |
-| 7 | Voz a texto (faster-whisper) | ⚪ |
+| 7 | Voz a texto (faster-whisper) | ✅ [bitácora](docs/etapas/07-voz-a-texto.md) |
 | 8 | Texto a voz (Piper) | ⚪ |
 | 9 | Palabra de activación "Hey JARVIS" | ⚪ |
 | 10 | Seguridad y acceso en la red local | ⚪ |

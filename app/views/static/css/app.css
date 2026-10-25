@@ -264,6 +264,22 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
 .send-btn:disabled { background: var(--surface-2); color: var(--muted); }
 .composer__hint { text-align: center; font-size: 12px; color: var(--muted); margin: 0 0 10px; }
 
+/* Micrófono */
+.mic-btn {
+  display: grid; place-items: center; width: 40px; height: 40px; flex: none;
+  border: 0; border-radius: 12px; background: transparent; color: var(--muted);
+}
+.mic-btn:hover:not(:disabled) { background: var(--surface-2); color: var(--accent-strong); }
+.mic-btn.is-recording { background: var(--danger); color: #fff; animation: pulse 1.2s ease-in-out infinite; }
+.mic-btn:disabled { opacity: 0.5; }
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--danger) 55%, transparent); }
+  50% { box-shadow: 0 0 0 8px color-mix(in srgb, var(--danger) 0%, transparent); }
+}
+@media (prefers-reduced-motion: reduce) { .mic-btn.is-recording { animation: none; } }
+.voice-status { max-width: 760px; width: calc(100% - 32px); margin: 0 auto 6px; font-size: 13px; color: var(--accent-strong); text-align: center; }
+.voice-status.is-error { color: var(--danger); }
+
 /* ---------- Celular ---------- */
 .scrim { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45); z-index: 20; }
 @media (max-width: 820px) {

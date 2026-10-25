@@ -41,6 +41,13 @@ class Settings(BaseSettings):
     rag_min_similarity: float = 0.5
     rag_min_similarity_with_keywords: float = 0.42
 
+    # Voz a texto (Etapa 7)
+    stt_model: str = "small"
+    stt_language: str = "es"
+    stt_threads: int = 4
+    stt_initial_prompt: str = "Conversación en español con JARVIS, el asistente de la casa."
+    stt_idle_unload_seconds: int = 300
+
     # Ingesta (Etapa 6). Apágalo para trabajar 100 % sin conexión.
     ingestion_allow_internet: bool = True
     uploads_dir: str = "data/uploads"
