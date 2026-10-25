@@ -60,12 +60,12 @@ flowchart LR
 **Tecnología:** Docker Compose + PostgreSQL 17 + pgvector + SQLAlchemy 2 + Alembic.
 **Objetivo:** guardar conversaciones, documentos y vectores.
 
-**Entregables**
-- `docker-compose.yml` con la imagen `pgvector/pgvector:pg17`, un volumen persistente y límites de memoria.
-- Modelos SQLAlchemy de [el modelo relacional](arquitectura/05-modelo-relacional.md).
-- Primera migración de Alembic (tablas, índice HNSW y búsqueda de texto completo).
-- Repositorios base (`BaseRepository`) y datos de prueba (*seed*).
-- Script de copia de seguridad (`pg_dump`).
+**Entregables** · ✅ [bitácora](etapas/02-postgres-pgvector.md)
+- [x] `docker-compose.yml` con la imagen `pgvector/pgvector:pg17`, un volumen persistente y límites de memoria.
+- [x] Modelos SQLAlchemy de [el modelo relacional](arquitectura/05-modelo-relacional.md).
+- [x] Primera migración de Alembic (tablas, índice HNSW y búsqueda de texto completo).
+- [x] Repositorios base (`BaseRepository`) y datos de prueba (*seed*).
+- [x] Script de copia de seguridad (`pg_dump`).
 
 **Terminado cuando:** `alembic upgrade head` crea todo, y una prueba inserta un vector y lo recupera por similitud.
 

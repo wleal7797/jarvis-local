@@ -9,6 +9,10 @@ dependencies = [
     "uvicorn[standard]>=0.32",
     "pydantic-settings>=2.6",
     "httpx>=0.28",
+    "sqlalchemy[asyncio]>=2.0.36",
+    "asyncpg>=0.30",
+    "pgvector>=0.4",
+    "alembic>=1.14",
 ]
 
 [project.optional-dependencies]
@@ -27,6 +31,8 @@ include = ["app*"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+markers = ["db: necesita PostgreSQL corriendo (docker compose up -d)"]
+filterwarnings = ["ignore:Using `httpx` with `starlette.testclient`"]
 
 [tool.ruff]
 line-length = 100
@@ -34,3 +40,7 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "SIM"]
+
+[tool.ruff.lint.per-file-ignores]
+# Migraciones generadas por Alembic: se dejan como las escribe la herramienta.
+"migrations/versions/*" = ["E501"]

@@ -14,6 +14,7 @@ from fastapi import FastAPI, Request, Response
 
 from app.controllers import health_controller
 from app.core.config import get_settings
+from app.core.database import create_engine, create_session_factory
 from app.core.logging import setup_logging
 
 logger = logging.getLogger("jarvis")
@@ -23,9 +24,13 @@ logger = logging.getLogger("jarvis")
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings = get_settings()
     app.state.http = httpx.AsyncClient(timeout=settings.ollama_timeout_seconds)
+    # El motor no se conecta todavía: abre conexiones cuando se usan por primera vez.
+    app.state.engine = create_engine(settings.database_url())
+    app.state.session_factory = create_session_factory(app.state.engine)
     logger.info("JARVIS iniciado", extra={"environment": settings.environment})
     yield
     await app.state.http.aclose()
+    await app.state.engine.dispose()
     logger.info("JARVIS detenido")
 
 

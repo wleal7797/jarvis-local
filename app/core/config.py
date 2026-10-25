@@ -7,7 +7,9 @@ Ver `.env.example` para la lista completa.
 from functools import lru_cache
 from typing import Literal
 
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from sqlalchemy import URL
 
 
 class Settings(BaseSettings):
@@ -25,6 +27,23 @@ class Settings(BaseSettings):
     ollama_chat_model: str = "qwen3:4b-instruct"
     ollama_embed_model: str = "bge-m3"
     ollama_timeout_seconds: float = 120.0
+
+    postgres_user: str = "jarvis"
+    postgres_password: SecretStr = SecretStr("")
+    postgres_db: str = "jarvis"
+    postgres_host: str = "127.0.0.1"
+    postgres_port: int = 5434
+
+    def database_url(self, database: str | None = None) -> str:
+        """URL de conexión para SQLAlchemy (driver asyncpg)."""
+        return URL.create(
+            drivername="postgresql+asyncpg",
+            username=self.postgres_user,
+            password=self.postgres_password.get_secret_value(),
+            host=self.postgres_host,
+            port=self.postgres_port,
+            database=database or self.postgres_db,
+        ).render_as_string(hide_password=False)
 
 
 @lru_cache
