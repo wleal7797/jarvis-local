@@ -12,7 +12,7 @@ from contextlib import asynccontextmanager
 import httpx
 from fastapi import FastAPI, Request, Response
 
-from app.controllers import health_controller
+from app.controllers import chat_controller, health_controller
 from app.core.config import get_settings
 from app.core.database import create_engine, create_session_factory
 from app.core.logging import setup_logging
@@ -65,6 +65,7 @@ def create_app() -> FastAPI:
         return {"message": f"{settings.app_name} en línea", "docs": "/docs", "health": "/health"}
 
     app.include_router(health_controller.router)
+    app.include_router(chat_controller.router)
     return app
 
 

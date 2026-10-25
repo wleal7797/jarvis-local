@@ -75,12 +75,12 @@ flowchart LR
 **Tecnología:** Ollama (API HTTP) + `qwen3:4b-instruct`.
 **Objetivo:** que JARVIS converse, con personalidad propia.
 
-**Entregables**
-- `LLMProvider` (interfaz) y `OllamaProvider` (implementación), con respuestas en streaming.
-- `Modelfile` de JARVIS: indicaciones de sistema, temperatura y tamaño de contexto.
-- `ChatService` que guarda conversación y mensajes en la base de datos.
-- Endpoint `POST /api/chat` con streaming.
-- Comparación documentada entre `qwen3:4b-instruct`, `qwen3:4b` (con razonamiento), `gemma3:4b` y `llama3.2:3b` (calidad en español, velocidad, VRAM).
+**Entregables** · ✅ [bitácora](etapas/03-ollama-chat.md)
+- [x] `LLMProvider` (interfaz) y `OllamaProvider` (implementación), con respuestas en streaming.
+- [x] `Modelfile` de JARVIS: indicaciones de sistema, temperatura y tamaño de contexto.
+- [x] `ChatService` que guarda conversación y mensajes en la base de datos.
+- [x] Endpoint `POST /api/chat` con streaming.
+- [x] Comparación documentada entre `qwen3:4b-instruct`, `qwen3:4b` (con razonamiento), `llama3.2:3b` y `qwen2.5:3b` (calidad en español, velocidad, VRAM). `gemma3:4b` se dejó fuera para no descargar 3,3 GB más.
 
 **Terminado cuando:** desde Swagger (`/docs`) se conversa con JARVIS y el historial queda en PostgreSQL.
 

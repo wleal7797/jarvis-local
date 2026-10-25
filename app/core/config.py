@@ -24,9 +24,12 @@ class Settings(BaseSettings):
     api_port: int = 8000
 
     ollama_base_url: str = "http://127.0.0.1:11434"
-    ollama_chat_model: str = "qwen3:4b-instruct"
+    ollama_chat_model: str = "jarvis:base"
     ollama_embed_model: str = "bge-m3"
     ollama_timeout_seconds: float = 120.0
+
+    # Usuario con el que se conversa hasta que exista el inicio de sesión (Etapa 10).
+    default_username: str = "dueno"
 
     postgres_user: str = "jarvis"
     postgres_password: SecretStr = SecretStr("")
