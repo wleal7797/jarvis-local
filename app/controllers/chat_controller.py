@@ -1,17 +1,22 @@
 """Controlador del chat: conversar con JARVIS y consultar el historial."""
 
 import json
+import logging
 from collections.abc import AsyncIterator
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect, status
 from fastapi.responses import StreamingResponse
+from pydantic import ValidationError
 
 from app.core.dependencies import ChatServiceDep, CurrentUserDep, SessionDep
 from app.repositories import ConversationRepository
 from app.schemas.chat import ChatIn, ConversationOut, MessageOut
 from app.services.chat_service import ChatEvent, ConversationNotFoundError
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/api", tags=["chat"])
+ws_router = APIRouter(tags=["chat"])
 
 NOT_FOUND = "Conversación no encontrada"
 
@@ -69,3 +74,32 @@ async def delete_conversation(conversation_id: int, user: CurrentUserDep, sessio
     if conversation is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, NOT_FOUND)
     await repo.delete(conversation)
+
+
+@ws_router.websocket("/ws/chat")
+async def chat_ws(websocket: WebSocket, user: CurrentUserDep, service: ChatServiceDep) -> None:
+    """Chat en vivo para la vista web.
+
+    El navegador envía `{"message": "...", "conversation_id": 1 | null}` y recibe los mismos
+    eventos que `POST /api/chat` (`start`, `token`, `end`, `error`), uno por mensaje.
+    La conexión queda abierta para seguir conversando.
+    """
+    await websocket.accept()
+    try:
+        while True:
+            raw = await websocket.receive_text()
+            try:
+                body = ChatIn.model_validate_json(raw)
+            except ValidationError:
+                await websocket.send_json({"type": "error", "message": "Mensaje inválido."})
+                continue
+            if body.conversation_id is not None:
+                try:
+                    await service.ensure_conversation(user.id, body.conversation_id)
+                except ConversationNotFoundError:
+                    await websocket.send_json({"type": "error", "message": NOT_FOUND})
+                    continue
+            async for event in service.answer(user.id, body.message, body.conversation_id):
+                await websocket.send_json(event)
+    except WebSocketDisconnect:
+        logger.info("WebSocket cerrado por el navegador")

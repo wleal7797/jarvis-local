@@ -5,7 +5,7 @@
 
 > 🚧 **Proyecto en construcción.** Se desarrolla por etapas y cada una queda documentada en `docs/`.
 
-**Estado:** 🟡 Etapa 3 terminada: JARVIS ya conversa (Ollama + streaming + historial)
+**Estado:** 🟡 Etapa 4 terminada: chat web en vivo, en el navegador del PC o del celular
 
 ## Inicio rápido
 
@@ -17,13 +17,19 @@ docker compose up -d                    # PostgreSQL + pgvector
 .\.venv\Scripts\alembic upgrade head
 ollama create jarvis:base -f ollama/Modelfile   # personalidad de JARVIS
 .\.venv\Scripts\python -m scripts.seed
-.\.venv\Scripts\python -m app          # http://127.0.0.1:8000/docs
+.\.venv\Scripts\python -m app          # http://127.0.0.1:8000  (API en /docs)
 .\.venv\Scripts\python -m pytest
 ```
 
 Requisitos previos: ver la [guía de instalación](docs/04-instalacion-paso-a-paso.md).
 
 ---
+
+<p align="center">
+  <img src="docs/img/etapa-04-bienvenida.jpg" alt="Pantalla de bienvenida de JARVIS" width="260">
+  &nbsp;
+  <img src="docs/img/etapa-04-respuesta.jpg" alt="JARVIS respondiendo en el chat" width="260">
+</p>
 
 ## Principios
 
@@ -41,7 +47,7 @@ Requisitos previos: ver la [guía de instalación](docs/04-instalacion-paso-a-pa
 | Embeddings | `bge-m3` (multilingüe, 1024 dimensiones) |
 | Base de datos | PostgreSQL 17 + [pgvector](https://github.com/pgvector/pgvector) (Docker) |
 | Backend (MVC) | Python 3.12 · FastAPI · SQLAlchemy 2 · Alembic |
-| Vista | Jinja2 · HTMX · WebSocket |
+| Vista | Jinja2 · WebSocket · JavaScript y CSS propios (sin CDN) |
 | Voz a texto | [faster-whisper](https://github.com/SYSTRAN/faster-whisper) + Silero VAD |
 | Texto a voz | [Piper](https://github.com/OHF-Voice/piper1-gpl) |
 | Palabra de activación | [openWakeWord](https://github.com/dscripka/openWakeWord) ("hey jarvis") |
@@ -86,7 +92,7 @@ flowchart LR
 | 1 | Backend MVC con FastAPI | ✅ [bitácora](docs/etapas/01-fastapi-mvc.md) |
 | 2 | PostgreSQL + pgvector | ✅ [bitácora](docs/etapas/02-postgres-pgvector.md) |
 | 3 | Ollama: modelo de lenguaje local | ✅ [bitácora](docs/etapas/03-ollama-chat.md) |
-| 4 | Vista web | ⚪ |
+| 4 | Vista web | ✅ [bitácora](docs/etapas/04-vista-web.md) |
 | 5 | Embeddings y RAG | ⚪ |
 | 6 | Ingesta de conocimiento externo | ⚪ |
 | 7 | Voz a texto (faster-whisper) | ⚪ |

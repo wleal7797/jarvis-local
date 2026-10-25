@@ -12,7 +12,7 @@ C4Container
   System_Ext(web, "Fuentes públicas", "Sólo en desarrollo")
 
   System_Boundary(pc, "PC servidor · Windows 11 · red de la casa") {
-    Container(webapp, "Aplicación web", "HTML, Jinja2, HTMX, JavaScript", "Chat, voz, conocimiento y entrenamiento. Se ejecuta en el navegador.")
+    Container(webapp, "Aplicación web", "HTML, Jinja2, JavaScript", "Chat, voz, conocimiento y entrenamiento. Se ejecuta en el navegador.")
     Container(proxy, "Proxy inverso", "Caddy", "HTTPS local con certificado propio")
     Container(api, "API JARVIS", "Python 3.12, FastAPI", "Controladores MVC, servicios, voz a texto y texto a voz")
     Container(worker, "Worker de ingesta", "Python", "Descarga, divide y vectoriza documentos en segundo plano")
@@ -41,7 +41,7 @@ C4Container
 
 | Contenedor | Tecnología | Puerto | Responsabilidad | Etapa |
 |---|---|---|---|---|
-| Aplicación web | Jinja2 + HTMX + JS | — | Interfaz. Graba el micrófono y reproduce audio. | 4, 7, 8 |
+| Aplicación web | Jinja2 + JavaScript propio | — | Interfaz. Graba el micrófono y reproduce audio. | 4, 7, 8 |
 | Proxy inverso | Caddy | 443 | HTTPS en la LAN, necesario para usar el micrófono desde el celular | 10 |
 | API JARVIS | FastAPI + Uvicorn | 8000 | Núcleo MVC: controladores, servicios y repositorios | 1 – 13 |
 | Worker de ingesta | Python (proceso aparte) | — | Tareas largas sin bloquear el chat | 6 |

@@ -55,3 +55,6 @@ desktop.ini
 !.vscode/settings.json
 logs/
 *.log
+
+# ---------- Herramientas locales ----------
+.claude/

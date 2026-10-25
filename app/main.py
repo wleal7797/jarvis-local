@@ -11,8 +11,9 @@ from contextlib import asynccontextmanager
 
 import httpx
 from fastapi import FastAPI, Request, Response
+from fastapi.staticfiles import StaticFiles
 
-from app.controllers import chat_controller, health_controller
+from app.controllers import chat_controller, health_controller, page_controller
 from app.core.config import get_settings
 from app.core.database import create_engine, create_session_factory
 from app.core.logging import setup_logging
@@ -60,12 +61,15 @@ def create_app() -> FastAPI:
         )
         return response
 
-    @app.get("/", include_in_schema=False)
-    async def root() -> dict[str, str]:
+    @app.get("/api", include_in_schema=False)
+    async def api_root() -> dict[str, str]:
         return {"message": f"{settings.app_name} en línea", "docs": "/docs", "health": "/health"}
 
+    app.mount("/static", StaticFiles(directory=page_controller.VIEWS_DIR / "static"), "static")
+    app.include_router(page_controller.router)
     app.include_router(health_controller.router)
     app.include_router(chat_controller.router)
+    app.include_router(chat_controller.ws_router)
     return app
 
 
