@@ -264,6 +264,28 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
 .send-btn:disabled { background: var(--surface-2); color: var(--muted); }
 .composer__hint { text-align: center; font-size: 12px; color: var(--muted); margin: 0 0 10px; }
 
+/* Voz de JARVIS */
+.voice-toggle .icon-voice-off { display: none; }
+.voice-toggle[aria-pressed="false"] .icon-voice-on { display: none; }
+.voice-toggle[aria-pressed="false"] .icon-voice-off { display: block; }
+.voice-toggle[aria-pressed="true"] { color: var(--accent-strong); }
+.speaking {
+  display: flex; align-items: center; gap: 8px; margin: 4px auto 0; padding: 6px 14px;
+  border: 1px solid var(--border); border-radius: 999px; background: var(--surface);
+  color: var(--muted); font-size: 13px; box-shadow: var(--shadow);
+}
+.speaking[hidden] { display: none; }
+.speaking strong { color: var(--danger); }
+.speaking__bars { display: inline-flex; align-items: flex-end; gap: 2px; height: 12px; }
+.speaking__bars span { width: 3px; background: var(--accent); border-radius: 2px; animation: bars 0.9s ease-in-out infinite; }
+.speaking__bars span:nth-child(2) { animation-delay: 0.15s; }
+.speaking__bars span:nth-child(3) { animation-delay: 0.3s; }
+@keyframes bars { 0%, 100% { height: 4px; } 50% { height: 12px; } }
+@media (prefers-reduced-motion: reduce) { .speaking__bars span { animation: none; height: 8px; } }
+.listen-btn { background: none; border: 0; padding: 0; color: var(--accent-strong); font: inherit; font-size: 12px; cursor: pointer; }
+.listen-btn:hover { text-decoration: underline; }
+.listen-btn:disabled { opacity: 0.6; cursor: wait; }
+
 /* Micrófono */
 .mic-btn {
   display: grid; place-items: center; width: 40px; height: 40px; flex: none;
@@ -411,3 +433,21 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
   .stats { grid-template-columns: minmax(0, 1fr); gap: 6px; }
   .stat { grid-template-columns: auto minmax(0, 1fr); align-items: baseline; gap: 8px; padding: 8px 14px; }
 }
+
+
+/* Diálogo de ajustes (voz) */
+button.nav-link { width: 100%; background: none; border: 0; text-align: left; cursor: pointer; }
+.dialog {
+  width: min(440px, calc(100vw - 32px)); padding: 0; border: 1px solid var(--border);
+  border-radius: var(--radius); background: var(--surface); color: var(--text); box-shadow: var(--shadow);
+}
+.dialog::backdrop { background: rgba(0, 0, 0, 0.5); }
+.dialog__body { display: grid; gap: 14px; padding: 20px; }
+.dialog__body h2 { margin: 0; font-size: 18px; }
+.dialog__body select, .dialog__body input[type="range"] { width: 100%; }
+.dialog__body select { padding: 9px 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); color: var(--text); font: inherit; }
+.dialog__body input[type="range"] { accent-color: var(--accent); }
+.field__value { font-weight: 400; color: var(--muted); }
+.range-labels { display: flex; justify-content: space-between; font-size: 12px; font-weight: 400; color: var(--muted); }
+.dialog__body .hint code { font-size: 12px; }
+.dialog__actions { display: flex; justify-content: flex-end; gap: 8px; }

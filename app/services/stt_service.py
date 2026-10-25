@@ -11,6 +11,7 @@ Decisiones (ver docs/etapas/07-voz-a-texto.md):
 import asyncio
 import io
 import logging
+import re
 import threading
 import time
 from collections.abc import Callable
@@ -20,6 +21,15 @@ from typing import Any, Protocol
 logger = logging.getLogger(__name__)
 
 MAX_AUDIO_SECONDS = 60
+
+# El nombre se pronuncia "Yarbis": si Whisper lo escribe como suena, se corrige a "Jarvis".
+_NAME_VARIANTS = re.compile(
+    r"\b(?:[yjhl]{1,2}ar[bv]i[sz]|[yjh]ar[bv]ys|yarbi|jarbis|harbys|llarvis)\b", re.IGNORECASE
+)
+
+
+def normalize_name(text: str) -> str:
+    return _NAME_VARIANTS.sub("Jarvis", text)
 
 
 class TranscriptionError(RuntimeError):
@@ -44,7 +54,9 @@ class WhisperSettings:
     language: str = "es"
     threads: int = 4
     compute_type: str = "int8"
-    initial_prompt: str = "Conversación en español con JARVIS, el asistente de la casa."
+    initial_prompt: str = (
+        "Conversación en español con Jarvis (se pronuncia Yarbis), el asistente de la casa."
+    )
     idle_unload_seconds: int = 300
 
 
@@ -94,7 +106,7 @@ class FasterWhisperSTT:
                 )
                 if info.duration > MAX_AUDIO_SECONDS:
                     raise TranscriptionError(f"El audio supera {MAX_AUDIO_SECONDS} segundos")
-                text = " ".join(segment.text.strip() for segment in segments).strip()
+                text = normalize_name(" ".join(s.text.strip() for s in segments).strip())
             except TranscriptionError:
                 raise
             except Exception as exc:  # audio dañado o formato desconocido

@@ -16,11 +16,12 @@ flowchart LR
   E0[0 Fundaciones] --> E1[1 FastAPI MVC] --> E2[2 PostgreSQL + pgvector] --> E3[3 Ollama]
   E3 --> E4[4 Vista web]
   E3 --> E5[5 Embeddings + RAG] --> E6[6 Ingesta de conocimiento]
-  E4 --> E7[7 Voz a texto] --> E8[8 Texto a voz] --> E9[9 Hey JARVIS]
-  E4 --> E10[10 Seguridad + red local]
-  E6 --> E11[11 Memoria y datos personales] --> E12[12 Fine-tuning LoRA]
+  E4 --> E7[7 Voz a texto] --> E8[8 Texto a voz] --> E9[9 Jarvis siempre atento]
+  E9 --> E10[10 Memoria y datos personales] --> E12[12 Fine-tuning LoRA]
+  E6 --> E10
+  E4 --> E11[11 Seguridad + red local]
   E9 --> E13[13 Herramientas + v1.0]
-  E10 --> E13
+  E11 --> E13
   E12 --> E13
 ```
 
@@ -150,32 +151,52 @@ flowchart LR
 ---
 
 ## Etapa 8 · Texto a voz (TTS)
-**Tecnología:** Piper (voz `es_MX-ald-medium` o `es_ES-davefx-medium`).
-**Objetivo:** que JARVIS responda hablando.
+**Tecnología:** Piper · voz `es_ES-davefx-medium` (elegida escuchando 7 voces de Piper y Kokoro).
+**Objetivo:** que JARVIS responda hablando, con una voz natural.
 
-**Entregables**
-- `TTSService` con la interfaz `TextToSpeech`.
-- Síntesis **por frases**: empieza a hablar mientras el modelo sigue escribiendo.
-- Selector de voz y de velocidad en la vista.
+**Entregables** · ✅ [bitácora](etapas/08-texto-a-voz.md)
+- [x] `TTSService` con la interfaz `TextToSpeech`.
+- [x] Comparación de voces en español con muestras para escuchar; se eligió la favorita.
+- [x] Síntesis **por frases**: empieza a hablar mientras el modelo sigue escribiendo.
+- [x] Texto limpio para hablar: sin Markdown, sin citas [1] ni enlaces.
+- [x] Controles en la vista: respuestas en voz alta (sí/no), detener la voz y volver a escuchar. La voz se cambia en `.env` (`TTS_VOICE`).
 
-**Terminado cuando:** el ciclo completo "hablas → piensa → responde con voz" toma menos de 4 segundos hasta la primera palabra.
-
----
-
-## Etapa 9 · Palabra de activación "Hey JARVIS"
-**Tecnología:** openWakeWord (modelo `hey_jarvis`) + `sounddevice`.
-**Objetivo:** activar JARVIS sin tocar nada, con el micrófono del PC servidor.
-
-**Entregables**
-- `VoiceAgent`: proceso aparte que escucha continuamente, detecta "hey jarvis", graba hasta el silencio y envía el audio a la API.
-- Sonido de confirmación al activarse y salida por los parlantes del PC.
-- Ajuste del umbral para evitar activaciones falsas.
-
-**Terminado cuando:** dices "Hey JARVIS, ¿qué hora es?" desde 2 metros y responde por los parlantes.
+**Terminado cuando:** JARVIS responde en voz alta y la primera frase suena poco después de que aparece en pantalla. ✅ ~1,3 s después del texto.
 
 ---
 
-## Etapa 10 · Seguridad y acceso desde la red local
+## Etapa 9 · "Jarvis" siempre atento y conversación fluida
+**Tecnología:** openWakeWord (modelo `hey_jarvis` y, si hace falta, uno propio para "Jarvis") + Silero VAD + `sounddevice`.
+**Objetivo:** hablarle sin tocar nada. Dices *"Jarvis, ¿cómo estás?"* y responde por los parlantes, como en una conversación.
+
+**Entregables**
+- `VoiceAgent`: proceso aparte con el **micrófono siempre activo** que detecta el nombre "Jarvis" sin enviar nada a internet.
+- **Modo conversación:** después de responder sigue escuchando unos segundos, así no hay que repetir "Jarvis" en cada frase.
+- **Interrumpir:** si le hablas mientras habla, se calla y te escucha.
+- Sonido de confirmación al activarse, respuesta por los parlantes del PC y ajuste del umbral contra activaciones falsas.
+- Medición: activaciones correctas, falsas activaciones por hora y tiempo de respuesta.
+
+**Terminado cuando:** dices "Jarvis, ¿cómo estás?" desde 2 metros, responde en voz alta, y puedes seguir conversando sin repetir su nombre.
+
+---
+
+## Etapa 10 · Memoria y datos personales (módulo de entrenamiento, parte 1)
+**Tecnología:** pgvector (memoria a largo plazo) + calificación de respuestas.
+**Objetivo:** que JARVIS **recuerde lo que le cuentas** y aprenda de ti sin que tus datos salgan del PC.
+
+> Se adelantó (antes era la Etapa 11) porque recordar es parte de una conversación natural.
+
+**Entregables**
+- `MemoryService`: JARVIS detecta y guarda datos importantes que le cuentas ("mi cumpleaños es…", "me gusta el café sin azúcar") y los recuerda en conversaciones futuras.
+- Panel "Memoria": ver, corregir y borrar lo que JARVIS recuerda de ti.
+- Documentos personales (ya funcionan desde la Etapa 6) integrados en la memoria.
+- Botones 👍 / 👎 en cada respuesta, con un campo para escribir la respuesta correcta; las correcciones se vuelven ejemplos de entrenamiento (`training_examples`).
+
+**Terminado cuando:** le cuentas algo por voz, cierras la conversación, abres otra, y lo recuerda.
+
+---
+
+## Etapa 11 · Seguridad y acceso desde la red local
 **Tecnología:** Caddy (HTTPS local) + Argon2 + sesiones con JWT + Firewall de Windows.
 **Objetivo:** entrar desde el celular y otros dispositivos de forma segura. Ver [acceso en red](02-acceso-desde-la-red-local.md).
 
@@ -183,23 +204,9 @@ flowchart LR
 - `AuthService`, login y los roles `owner`, `member` y `guest`.
 - `Caddyfile` con `tls internal` y una guía para instalar el certificado en el celular.
 - Regla de firewall sólo para la red privada y reserva de IP en el router.
-- Pruebas: un `guest` no puede ver los documentos personales.
+- Pruebas: un `guest` no puede ver los documentos ni los recuerdos personales.
 
 **Terminado cuando:** desde el celular entras con usuario y contraseña a `https://<ip-del-pc>` y le hablas a JARVIS por el micrófono del celular.
-
----
-
-## Etapa 11 · Memoria y datos personales (módulo de entrenamiento, parte 1)
-**Tecnología:** pgvector (memoria a largo plazo) + calificación de respuestas.
-**Objetivo:** que JARVIS aprenda de **ti** sin que tus datos salgan del PC.
-
-**Entregables**
-- Panel "Entrenamiento": subir documentos personales (PDF, Word, notas). Quedan marcados `is_personal`.
-- `MemoryService`: JARVIS guarda datos importantes que le cuentas ("mi cumpleaños es…") y los recuerda en conversaciones futuras.
-- Botones 👍 / 👎 en cada respuesta, con un campo para escribir la respuesta correcta.
-- Las correcciones se convierten en ejemplos de entrenamiento (`training_examples`).
-
-**Terminado cuando:** le cuentas algo, cierras la conversación, abres otra, y lo recuerda.
 
 ---
 

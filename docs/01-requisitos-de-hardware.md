@@ -64,11 +64,11 @@ Cálculo para `qwen3:4b` (36 capas, 8 cabezas KV de 128 dimensiones) con la cach
 | Instrucciones de sistema (personalidad JARVIS) | ≈ 700 |
 | Fragmentos del RAG (3 × 500) | ≈ 1 800 |
 | Historial reciente de la conversación | ≈ 1 600 |
-| Espacio para la respuesta y los recuerdos (Etapa 11) | ≈ 2 000 |
+| Espacio para la respuesta y los recuerdos (Etapa 10) | ≈ 2 000 |
 
 > **Historia de esta decisión:** al principio se eligió 8192. En la Etapa 5 se midió que esa GPU lee el contexto a ~250 tokens/s, así que 3 fragmentos bastan, y con 6144 el modelo cabe entero en la GPU: genera más rápido (42,8 contra 33–38 tokens/s), usa 734 MB de RAM y deja libre el procesador.
 
-**La memoria de largo plazo no depende del contexto.** Lo que JARVIS debe recordar para siempre se guarda en PostgreSQL (tabla `memories`, Etapa 11) y se trae al contexto sólo cuando es relevante. Cuando una conversación supera el espacio del historial, los mensajes antiguos se resumen.
+**La memoria de largo plazo no depende del contexto.** Lo que JARVIS debe recordar para siempre se guarda en PostgreSQL (tabla `memories`, Etapa 10) y se trae al contexto sólo cuando es relevante. Cuando una conversación supera el espacio del historial, los mensajes antiguos se resumen.
 
 Se configura con la variable `OLLAMA_CONTEXT_LENGTH=6144` y en `ollama/Modelfile` (`num_ctx`).
 

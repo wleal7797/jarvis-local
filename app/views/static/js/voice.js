@@ -3,7 +3,7 @@
  * - Toca el micrófono para empezar y otra vez para terminar (o espera 30 s).
  * - Esc cancela la grabación.
  * - El navegador sólo permite el micrófono en localhost o con HTTPS: desde el celular
- *   funcionará cuando exista el HTTPS de la Etapa 10.
+ *   funcionará cuando exista el HTTPS de la Etapa 11.
  */
 (function () {
   "use strict";
@@ -55,7 +55,7 @@
       showStatus(
         window.isSecureContext
           ? "No hay permiso para usar el micrófono. Revísalo en la configuración del navegador."
-          : "El micrófono sólo funciona en localhost o con HTTPS (llega en la Etapa 10).",
+          : "El micrófono sólo funciona en localhost o con HTTPS (llega en la Etapa 11).",
         true
       );
       return;

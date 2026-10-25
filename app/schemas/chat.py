@@ -10,6 +10,9 @@ class ChatIn(BaseModel):
     conversation_id: int | None = Field(
         default=None, description="Vacío para empezar una conversación nueva."
     )
+    voice: bool = Field(
+        default=False, description="Sólo WebSocket: además del texto, enviar la respuesta hablada."
+    )
 
 
 class ConversationOut(BaseModel):

@@ -160,3 +160,27 @@ async def test_la_pagina_de_chat_tiene_el_microfono():
     async with client_with(StubSTT()) as client:
         html = (await client.get("/")).text
     assert 'id="mic"' in html and "/static/js/voice.js" in html
+
+
+# ---------- El nombre: "Yarbis" se escribe "Jarvis" ----------
+
+
+@pytest.mark.parametrize(
+    ("heard", "fixed"),
+    [
+        ("Yarbis, ¿cómo estás?", "Jarvis, ¿cómo estás?"),
+        ("hola harvis", "hola Jarvis"),
+        ("Oye Yarvis, apaga eso", "Oye Jarvis, apaga eso"),
+        ("gracias llarvis", "gracias Jarvis"),
+        ("Un jarabe para la tos", "Un jarabe para la tos"),
+    ],
+)
+def test_corrige_como_suena_el_nombre(heard: str, fixed: str):
+    from app.services.stt_service import normalize_name
+
+    assert normalize_name(heard) == fixed
+
+
+async def test_la_transcripcion_sale_con_el_nombre_corregido():
+    stt, _ = make_stt(FakeWhisperModel(" Yarbis, ¿qué hora es? "))
+    assert (await stt.transcribe(b"audio")).text == "Jarvis, ¿qué hora es?"

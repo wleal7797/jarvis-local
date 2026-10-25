@@ -10,15 +10,19 @@ import time
 from pathlib import Path
 
 import httpx
+from sqlalchemy import select
 
 from app.core.config import get_settings
 from app.core.database import create_engine, create_session_factory
+from app.models import Document
 from app.services.embedding_service import OllamaEmbedder
 from app.services.knowledge_service import KnowledgeService
 
 SOURCE_NAME = "Documentación de JARVIS"
-# Los informes de evaluación contienen las respuestas: no se indexan.
-EXCLUDED = ("evaluacion",)
+# Los informes de evaluación y la comparación de modelos contienen respuestas de prueba
+# (por ejemplo "¿me puedes poner música?"): si se indexan, JARVIS las repite como si fueran
+# conocimiento. No se indexan.
+EXCLUDED = ("evaluacion", "comparacion")
 
 
 def doc_files() -> list[Path]:
@@ -53,7 +57,16 @@ async def main() -> None:
             source = await service.get_or_create_source(
                 "file", SOURCE_NAME, base_uri="docs/", license="Del proyecto"
             )
-            for path in doc_files():
+            files = doc_files()
+            current = {path.as_posix() for path in files}
+            # Documentos que ya no existen o que ahora se excluyen: se borran del índice.
+            stale = await session.scalars(select(Document).where(Document.source_id == source.id))
+            for document in stale.all():
+                if document.uri not in current:
+                    await session.delete(document)
+                    print(f"- {document.uri} (ya no se indexa)")
+            await session.commit()
+            for path in files:
                 text = path.read_text(encoding="utf-8")
                 result = await service.add_text(
                     source, title_of(path, text), text, uri=path.as_posix()

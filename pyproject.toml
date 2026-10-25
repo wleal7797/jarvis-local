@@ -22,12 +22,17 @@ dependencies = [
     "faster-whisper>=1.1",
     # av 14+ quitó el parámetro `metadata_errors` que faster-whisper 1.2 todavía usa.
     "av>=12,<14",
+    "piper-tts>=1.3",
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest>=8.3",
     "ruff>=0.8",
+]
+# Sólo para comparar voces (scripts/compare_tts_voices.py); JARVIS usa Piper.
+voces = [
+    "kokoro-onnx>=0.4",
 ]
 
 [build-system]

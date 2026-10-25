@@ -5,7 +5,7 @@ from types import SimpleNamespace
 import pytest
 from fastapi.testclient import TestClient
 
-from app.core.dependencies import get_chat_service, get_current_user
+from app.core.dependencies import get_chat_service, get_current_user, get_tts
 from app.main import create_app
 from app.services.chat_service import ConversationNotFoundError
 
@@ -38,6 +38,7 @@ def client(stub: StubChatService) -> TestClient:
     app = create_app()
     app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(id=1)
     app.dependency_overrides[get_chat_service] = lambda: stub
+    app.dependency_overrides[get_tts] = lambda: None  # estas pruebas no piden voz
     return TestClient(app)
 
 

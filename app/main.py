@@ -25,7 +25,9 @@ from app.controllers import (
 from app.core.config import get_settings
 from app.core.database import create_engine, create_session_factory
 from app.core.logging import setup_logging
+from app.core.preferences import load_preferences
 from app.services.stt_service import FasterWhisperSTT, WhisperSettings
+from app.services.tts_service import PiperSettings, PiperTTS
 
 logger = logging.getLogger("jarvis")
 
@@ -47,12 +49,24 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             idle_unload_seconds=settings.stt_idle_unload_seconds,
         )
     )
+    # La voz elegida desde la app (data/preferences.json) gana sobre la del .env.
+    preferences = load_preferences()
+    app.state.tts = PiperTTS(
+        PiperSettings(
+            voices_dir=settings.tts_voices_dir,
+            voice=preferences.get("tts_voice", settings.tts_voice),
+            length_scale=preferences.get("tts_length_scale", settings.tts_length_scale),
+            idle_unload_seconds=settings.tts_idle_unload_seconds,
+        )
+    )
     stt_watcher = asyncio.create_task(app.state.stt.run_idle_watcher())
+    tts_watcher = asyncio.create_task(app.state.tts.run_idle_watcher())
     logger.info("JARVIS iniciado", extra={"environment": settings.environment})
     yield
-    stt_watcher.cancel()
-    with contextlib.suppress(asyncio.CancelledError):
-        await stt_watcher
+    for watcher in (stt_watcher, tts_watcher):
+        watcher.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await watcher
     await app.state.http.aclose()
     await app.state.engine.dispose()
     logger.info("JARVIS detenido")
