@@ -12,6 +12,10 @@
         <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
         Nueva conversación
       </button>
+      <a class="nav-link" href="/conocimiento">
+        <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h12v16H6a2 2 0 0 0-2 2z"/><path d="M4 21V5M8 7h6"/></svg>
+        Conocimiento
+      </a>
     </div>
     <nav class="conversations" id="conversations" aria-label="Historial">
       <p class="conversations__empty" id="conversations-empty">Aún no hay conversaciones.</p>
@@ -70,6 +74,6 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/markdown.js"></script>
-<script src="/static/js/chat.js"></script>
+<script src="/static/js/markdown.js?v={{ v }}"></script>
+<script src="/static/js/chat.js?v={{ v }}"></script>
 {% endblock %}

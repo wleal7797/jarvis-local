@@ -7,8 +7,9 @@
 
 FROM qwen3:4b-instruct
 
-# Contexto: memoria de corto plazo (ver docs/01-requisitos-de-hardware.md).
-PARAMETER num_ctx 8192
+# Contexto: memoria de corto plazo. 6144 para que el modelo quepa 100 % en la GPU
+# (ver docs/01-requisitos-de-hardware.md#longitud-de-contexto-6144-tokens).
+PARAMETER num_ctx 6144
 # Creatividad moderada: respuestas naturales, sin inventar demasiado.
 PARAMETER temperature 0.6
 PARAMETER top_p 0.9

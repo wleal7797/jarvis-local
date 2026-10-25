@@ -36,11 +36,16 @@ class OllamaEmbedder:
         model: str,
         *,
         use_gpu: bool = False,
+        threads: int | None = None,
+        keep_alive: str | None = None,
     ) -> None:
         self._http = http
         self._url = base_url.rstrip("/") + "/api/embed"
         self._model = model
-        self._options = {} if use_gpu else {"num_gpu": 0}
+        self._options: dict = {} if use_gpu else {"num_gpu": 0}
+        if threads and not use_gpu:
+            self._options["num_thread"] = threads
+        self._keep_alive = keep_alive
 
     async def embed(self, texts: list[str]) -> list[list[float]]:
         vectors: list[list[float]] = []
@@ -52,7 +57,9 @@ class OllamaEmbedder:
         return (await self.embed([text]))[0]
 
     async def _embed_batch(self, batch: list[str]) -> list[list[float]]:
-        payload = {"model": self._model, "input": batch, "options": self._options}
+        payload: dict = {"model": self._model, "input": batch, "options": self._options}
+        if self._keep_alive:
+            payload["keep_alive"] = self._keep_alive
         try:
             response = await self._http.post(self._url, json=payload)
             response.raise_for_status()

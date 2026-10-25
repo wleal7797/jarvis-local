@@ -63,6 +63,11 @@ Crea el archivo `%USERPROFILE%\.wslconfig` con este contenido:
 memory=2GB
 processors=4
 swap=4GB
+
+[experimental]
+# Devuelve a Windows la memoria que WSL/Docker ya no usa.
+autoMemoryReclaim=gradual
+sparseVhd=true
 ```
 
 Luego aplica el cambio:
@@ -73,10 +78,10 @@ wsl --shutdown
 ```
 
 ### Paso 6 · Configurar Ollama para tu GPU de 4 GB
-Estas variables reducen el uso de VRAM y RAM. El porqué de los 8192 tokens de contexto está en [requisitos](01-requisitos-de-hardware.md#longitud-de-contexto-8192-tokens):
+Estas variables reducen el uso de VRAM y RAM. El porqué de los 6144 tokens de contexto está en [requisitos](01-requisitos-de-hardware.md#longitud-de-contexto-6144-tokens):
 
 ```powershell
-setx OLLAMA_CONTEXT_LENGTH "8192"
+setx OLLAMA_CONTEXT_LENGTH "6144"
 setx OLLAMA_KEEP_ALIVE "5m"
 setx OLLAMA_MAX_LOADED_MODELS "2"
 setx OLLAMA_NUM_PARALLEL "1"
@@ -135,8 +140,8 @@ No hace falta instalar esto ahora. Cada etapa lo instala y lo documenta.
 | 2 | Imagen `pgvector/pgvector:pg17` (puerto **5434**, porque 5432 y 5433 ya estaban ocupados) | `docker compose up -d` | ~450 MB |
 | 2 | SQLAlchemy, Alembic, psycopg, `pgvector` (Python) | `pip` | ~50 MB |
 | 5 | *(opcional)* reranker `bge-reranker-v2-m3` (ONNX int8) | descarga automática desde Hugging Face | ~600 MB |
-| 6 | trafilatura, pypdf, python-docx, mwparserfromhell | `pip` | ~80 MB |
-| 6 | Dump de Wikipedia en español | descarga desde `dumps.wikimedia.org` | ~5 GB comprimido |
+| 6 | trafilatura, pypdf, python-docx, python-multipart, psutil | `pip` | ~80 MB |
+| 6 | Artículos de Wikipedia elegidos (API pública, sin descargar el volcado completo) | panel *Conocimiento* | ~50 KB por artículo |
 | 7 | faster-whisper (+ modelo `small`), Silero VAD | `pip` (el modelo se descarga solo la primera vez) | ~600 MB |
 | 8 | Piper + voz `es_MX-ald-medium` | `pip install piper-tts` + archivo `.onnx` de Hugging Face (`rhasspy/piper-voices`) | ~80 MB |
 | 9 | openWakeWord (`hey_jarvis`), sounddevice | `pip` (el modelo se descarga solo) | ~50 MB |

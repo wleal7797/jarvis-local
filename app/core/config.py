@@ -29,6 +29,10 @@ class Settings(BaseSettings):
     ollama_timeout_seconds: float = 120.0
     # Los embeddings corren en la CPU para no quitarle VRAM al modelo de chat.
     ollama_embed_on_gpu: bool = False
+    # 4 de los 8 hilos: deja el resto del PC usable mientras calcula vectores.
+    ollama_embed_threads: int = 4
+    # Libera la RAM de bge-m3 (1,2 GB) poco después de usarlo.
+    ollama_embed_keep_alive: str = "2m"
 
     # RAG: búsqueda en documentos antes de responder (Etapa 5).
     rag_enabled: bool = True
@@ -36,6 +40,10 @@ class Settings(BaseSettings):
     rag_top_k: int = 3
     rag_min_similarity: float = 0.5
     rag_min_similarity_with_keywords: float = 0.42
+
+    # Ingesta (Etapa 6). Apágalo para trabajar 100 % sin conexión.
+    ingestion_allow_internet: bool = True
+    uploads_dir: str = "data/uploads"
 
     # Usuario con el que se conversa hasta que exista el inicio de sesión (Etapa 10).
     default_username: str = "dueno"

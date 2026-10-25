@@ -19,9 +19,9 @@ from app.services.llm import ChatMessage
 if TYPE_CHECKING:
     from app.services.retrieval_service import RetrievedChunk
 
-# Reparto del contexto de 8192 tokens
-# (ver docs/01-requisitos-de-hardware.md#longitud-de-contexto-8192-tokens).
-HISTORY_TOKEN_BUDGET = 2400
+# Reparto del contexto de 6144 tokens
+# (ver docs/01-requisitos-de-hardware.md#longitud-de-contexto-6144-tokens).
+HISTORY_TOKEN_BUDGET = 1600
 # 3 fragmentos de ~500 tokens: cada 250 tokens de contexto cuestan ~1 s en la GTX 1650 Ti.
 CONTEXT_TOKEN_BUDGET = 1800
 
