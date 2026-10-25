@@ -103,14 +103,14 @@ flowchart LR
 **Tecnología:** `bge-m3` en Ollama + pgvector (HNSW) + búsqueda de texto completo de PostgreSQL.
 **Objetivo:** que JARVIS responda con datos verificables y cite sus fuentes.
 
-**Entregables**
-- `EmbeddingService` (`bge-m3`, 1024 dimensiones, en CPU).
-- `Chunker`: fragmentos de unos 500 tokens con solapamiento.
-- `RetrievalService`: búsqueda **híbrida** (vectorial + palabras clave) combinada con *Reciprocal Rank Fusion*.
-- `PromptBuilder` que inyecta el contexto y pide citas.
-- Tabla `message_sources` para mostrar de dónde salió cada respuesta.
-- **Conjunto de evaluación**: 50 preguntas con respuesta conocida para medir la precisión.
-- *Opcional (con 16 GB de RAM):* reranker `bge-reranker-v2-m3`.
+**Entregables** · ✅ [bitácora](etapas/05-embeddings-rag.md) · **84 % de aciertos con RAG contra 6 % sin RAG**
+- [x] `EmbeddingService` (`bge-m3`, 1024 dimensiones, en CPU).
+- [x] `Chunker`: fragmentos de unos 500 tokens con solapamiento.
+- [x] `RetrievalService`: búsqueda **híbrida** (vectorial + palabras clave) combinada con *Reciprocal Rank Fusion*.
+- [x] `PromptBuilder` que inyecta el contexto y pide citas.
+- [x] Tabla `message_sources` para mostrar de dónde salió cada respuesta.
+- [x] **Conjunto de evaluación**: 50 preguntas con respuesta conocida para medir la precisión.
+- [ ] *Opcional (con 16 GB de RAM):* reranker `bge-reranker-v2-m3`. Pendiente por la RAM.
 
 **Terminado cuando:** con algunos documentos de prueba cargados, JARVIS responde citando la fuente correcta en al menos el 80 % del conjunto de evaluación.
 

@@ -13,7 +13,12 @@ import httpx
 from fastapi import FastAPI, Request, Response
 from fastapi.staticfiles import StaticFiles
 
-from app.controllers import chat_controller, health_controller, page_controller
+from app.controllers import (
+    chat_controller,
+    health_controller,
+    knowledge_controller,
+    page_controller,
+)
 from app.core.config import get_settings
 from app.core.database import create_engine, create_session_factory
 from app.core.logging import setup_logging
@@ -70,6 +75,7 @@ def create_app() -> FastAPI:
     app.include_router(health_controller.router)
     app.include_router(chat_controller.router)
     app.include_router(chat_controller.ws_router)
+    app.include_router(knowledge_controller.router)
     return app
 
 

@@ -1,0 +1,60 @@
+{"id": 1, "question": "¿En qué puerto escucha la base de datos PostgreSQL de JARVIS?", "keywords": ["5434"]}
+{"id": 2, "question": "¿Por qué JARVIS no usa el puerto 5433 para PostgreSQL?", "keywords": ["otro proyecto", "motor_asignacion"]}
+{"id": 3, "question": "¿Cuánta memoria de video (VRAM) tiene la tarjeta gráfica del servidor?", "keywords": ["4 gb", "4gb", "4 gib"]}
+{"id": 4, "question": "¿Qué modelo de chat usa JARVIS?", "keywords": ["qwen3:4b-instruct", "qwen3-4b-instruct"]}
+{"id": 5, "question": "¿Qué modelo se usa para calcular los embeddings?", "keywords": ["bge-m3"]}
+{"id": 6, "question": "¿Cuántas dimensiones tienen los vectores de embeddings?", "keywords": ["1024", "1 024", "1.024"]}
+{"id": 7, "question": "¿Cuál es la longitud de contexto configurada para el modelo?", "keywords": ["8192", "8 192", "8.192"]}
+{"id": 8, "question": "¿Cuántos tokens por segundo genera JARVIS en la GTX 1650 Ti?", "keywords": ["38", "40"]}
+{"id": 9, "question": "¿Qué herramienta convertirá la voz en texto?", "keywords": ["whisper"]}
+{"id": 10, "question": "¿Qué motor de síntesis de voz usará JARVIS para hablar?", "keywords": ["piper"]}
+{"id": 11, "question": "¿Qué librería detecta la palabra de activación?", "keywords": ["openwakeword"]}
+{"id": 12, "question": "¿Qué proxy inverso se usa para servir HTTPS en la red local?", "keywords": ["caddy"]}
+{"id": 13, "question": "¿Por qué se necesita HTTPS para usar JARVIS desde el celular?", "keywords": ["microfono"]}
+{"id": 14, "question": "¿Con qué algoritmo se guardan las contraseñas?", "keywords": ["argon2"]}
+{"id": 15, "question": "¿Qué roles de usuario existen en JARVIS?", "keywords": ["guest", "member", "invitado"]}
+{"id": 16, "question": "¿Cuántas tablas tiene la base de datos de JARVIS?", "keywords": ["14", "catorce"]}
+{"id": 17, "question": "¿Qué tipo de índice usa pgvector para la búsqueda vectorial?", "keywords": ["hnsw"]}
+{"id": 18, "question": "¿Por qué se usa halfvec en lugar de vector?", "keywords": ["mitad"]}
+{"id": 19, "question": "¿Qué técnica combina la búsqueda vectorial y la búsqueda por palabras?", "keywords": ["rrf", "reciprocal", "fusion"]}
+{"id": 20, "question": "¿Dónde se entrena el adaptador LoRA con datos públicos?", "keywords": ["colab", "kaggle"]}
+{"id": 21, "question": "¿Con qué herramienta se hace el ajuste fino del modelo?", "keywords": ["unsloth"]}
+{"id": 22, "question": "¿Dónde se entrenan los datasets que contienen datos personales?", "keywords": ["local"]}
+{"id": 23, "question": "¿Cuánta memoria RAM tiene el equipo servidor?", "keywords": ["8 gb", "8gb"]}
+{"id": 24, "question": "¿Cuánta RAM se recomienda para que JARVIS funcione cómodo?", "keywords": ["16 gb", "16gb"]}
+{"id": 25, "question": "¿Qué procesador tiene el servidor de JARVIS?", "keywords": ["10300"]}
+{"id": 26, "question": "¿Cuánto espacio ocuparía en la base la Wikipedia en español completa?", "keywords": ["50 gb", "50gb"]}
+{"id": 27, "question": "¿En cuántas etapas está dividido el proyecto?", "keywords": ["14", "catorce"]}
+{"id": 28, "question": "¿De qué trata la Etapa 9 del proyecto?", "keywords": ["activacion", "hey jarvis", "openwakeword"]}
+{"id": 29, "question": "En la comparación de modelos, ¿qué modelo dijo que Belalcázar fundó Bogotá?", "keywords": ["qwen2.5"]}
+{"id": 30, "question": "¿Por qué se descartó llama3.2 como modelo de chat?", "keywords": ["musica", "capacidad", "invent"]}
+{"id": 31, "question": "¿Por qué la vista web no usa HTMX?", "keywords": ["internet", "extern", "privacidad"]}
+{"id": 32, "question": "¿Cuánto tiempo mantiene Ollama el modelo cargado sin uso?", "keywords": ["5 min", "5m", "cinco min"]}
+{"id": 33, "question": "¿Para qué sirve la variable LLAMA_ARG_FIT_TARGET?", "keywords": ["margen"]}
+{"id": 34, "question": "¿Cuál es el límite de memoria configurado para WSL2 y Docker?", "keywords": ["2 gb", "2gb"]}
+{"id": 35, "question": "¿Qué imagen de Docker se usa para la base de datos?", "keywords": ["pgvector/pgvector", "pg17"]}
+{"id": 36, "question": "¿Cómo se hace una copia de seguridad de la base de datos?", "keywords": ["backup_db", "pg_dump"]}
+{"id": 37, "question": "¿En qué formato transmite sus respuestas el endpoint POST /api/chat?", "keywords": ["ndjson"]}
+{"id": 38, "question": "¿Cuál es la ruta del WebSocket del chat?", "keywords": ["/ws/chat"]}
+{"id": 39, "question": "¿Cuánto tarda la respuesta completa en la vista web con el modelo ya cargado?", "keywords": ["1,8", "1.8"]}
+{"id": 40, "question": "¿Por qué tarda unos 12 segundos la primera respuesta del día?", "keywords": ["carg", "descarg"]}
+{"id": 41, "question": "¿Qué diccionario de idioma usa la búsqueda por texto completo?", "keywords": ["spanish", "espanol"]}
+{"id": 42, "question": "¿Qué temperatura usa el Modelfile de JARVIS?", "keywords": ["0,6", "0.6"]}
+{"id": 43, "question": "¿Qué cláusula SQL usa la cola de ingesta para repartir tareas?", "keywords": ["skip locked"]}
+{"id": 44, "question": "¿Cómo podría accederse a JARVIS desde fuera de casa de forma segura?", "keywords": ["vpn", "wireguard", "tailscale"]}
+{"id": 45, "question": "¿Qué puerto abre la regla del firewall de Windows para JARVIS?", "keywords": ["443"]}
+{"id": 46, "question": "¿De cuántos tokens son aproximadamente los fragmentos de texto?", "keywords": ["500"]}
+{"id": 47, "question": "¿Cuántos tokens se reservan para el historial de la conversación?", "keywords": ["2400", "2 400", "2.400"]}
+{"id": 48, "question": "¿Qué librería se usará para extraer el texto de páginas web?", "keywords": ["trafilatura"]}
+{"id": 49, "question": "¿Qué cambio de diseño se hizo en CSS para que los títulos largos no desborden la barra lateral?", "keywords": ["minmax"]}
+{"id": 50, "question": "¿Qué versión de pgvector está instalada?", "keywords": ["0.8.7", "0.8"]}
+{"id": "n1", "question": "Hola JARVIS, ¿cómo estás?", "keywords": [], "negative": true}
+{"id": "n2", "question": "¿Cuál es la capital de Francia?", "keywords": [], "negative": true}
+{"id": "n3", "question": "Cuéntame un chiste corto.", "keywords": [], "negative": true}
+{"id": "n4", "question": "¿Cuántos planetas tiene el sistema solar?", "keywords": [], "negative": true}
+{"id": "n5", "question": "Dame una receta de arepas.", "keywords": [], "negative": true}
+{"id": "n6", "question": "¿Quién escribió Cien años de soledad?", "keywords": [], "negative": true}
+{"id": "n7", "question": "¿Qué es la fotosíntesis?", "keywords": [], "negative": true}
+{"id": "n8", "question": "Gracias, eso es todo.", "keywords": [], "negative": true}
+{"id": "n9", "question": "¿Cuál es el río más largo del mundo?", "keywords": [], "negative": true}
+{"id": "n10", "question": "Recomiéndame una película de ciencia ficción.", "keywords": [], "negative": true}

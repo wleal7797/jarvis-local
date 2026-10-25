@@ -22,6 +22,15 @@ class ConversationOut(BaseModel):
     updated_at: datetime
 
 
+class SourceRef(BaseModel):
+    n: int
+    chunk_id: int
+    title: str | None
+    section: str | None
+    uri: str | None
+    similarity: float | None
+
+
 class MessageOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -31,3 +40,4 @@ class MessageOut(BaseModel):
     created_at: datetime
     tokens_out: int | None
     latency_ms: int | None
+    sources: list[SourceRef] = []
