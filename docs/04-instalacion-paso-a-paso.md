@@ -132,7 +132,7 @@ No hace falta instalar esto ahora. Cada etapa lo instala y lo documenta.
 | Etapa | Qué se instala | Cómo | Tamaño |
 |---|---|---|---|
 | 1 | FastAPI, Uvicorn, Pydantic, pytest, ruff | `pip` dentro de `.venv` | ~100 MB |
-| 2 | Imagen `pgvector/pgvector:pg17` | `docker compose up -d` | ~450 MB |
+| 2 | Imagen `pgvector/pgvector:pg17` (puerto **5434**, porque 5432 y 5433 ya estaban ocupados) | `docker compose up -d` | ~450 MB |
 | 2 | SQLAlchemy, Alembic, psycopg, `pgvector` (Python) | `pip` | ~50 MB |
 | 5 | *(opcional)* reranker `bge-reranker-v2-m3` (ONNX int8) | descarga automática desde Hugging Face | ~600 MB |
 | 6 | trafilatura, pypdf, python-docx, mwparserfromhell | `pip` | ~80 MB |

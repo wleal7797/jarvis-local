@@ -1,0 +1,44 @@
+# Base de datos de JARVIS: PostgreSQL 17 + pgvector.
+# Uso:  docker compose up -d      (lee usuario y contraseña de .env)
+
+name: jarvis
+
+services:
+  db:
+    image: pgvector/pgvector:pg17
+    container_name: jarvis_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?Define POSTGRES_USER en .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD en .env}
+      POSTGRES_DB: ${POSTGRES_DB:-jarvis}
+      TZ: America/Bogota
+    # Sólo este PC puede conectarse (no la red de la casa).
+    # Puerto 5434: el 5432 lo usa un PostgreSQL de Windows y el 5433 otro proyecto.
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5434}:5432"
+    volumes:
+      - jarvis_pgdata:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    # Ajustes pensados para 8 GB de RAM en total.
+    command:
+      - postgres
+      - -c
+      - shared_buffers=256MB
+      - -c
+      - work_mem=16MB
+      - -c
+      - maintenance_work_mem=256MB
+      - -c
+      - effective_cache_size=768MB
+      - -c
+      - max_connections=30
+    mem_limit: 1g
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  jarvis_pgdata:

@@ -27,7 +27,7 @@ C4Container
   Rel(proxy, api, "Reenvía", "HTTP :8000")
   Rel(agent, api, "Envía audio y recibe la respuesta", "WebSocket")
   Rel(api, ollama, "Genera texto y embeddings", "HTTP :11434")
-  Rel(api, db, "Lee y escribe", "SQL :5432")
+  Rel(api, db, "Lee y escribe", "SQL :5434")
   Rel(api, fs, "Audios y archivos subidos")
   Rel(worker, db, "Toma tareas y guarda fragmentos", "SQL")
   Rel(worker, ollama, "Embeddings por lotes", "HTTP")
@@ -47,7 +47,7 @@ C4Container
 | Worker de ingesta | Python (proceso aparte) | — | Tareas largas sin bloquear el chat | 6 |
 | Agente de voz | Python + openWakeWord + sounddevice | — | Modo manos libres en el PC | 9 |
 | Servidor de modelos | Ollama | 11434 (sólo `127.0.0.1`) | Inferencia del modelo de chat y embeddings | 3, 5 |
-| Base de datos | PostgreSQL 17 + pgvector | 5432 (sólo `127.0.0.1`) | Datos relacionales y vectoriales | 2 |
+| Base de datos | PostgreSQL 17 + pgvector | 5434 (sólo `127.0.0.1`) | Datos relacionales y vectoriales | 2 |
 | Disco | Carpetas `data/` y `models/` | — | Archivos grandes que no van en la BD ni en Git | 2 – 12 |
 
 ## Decisiones

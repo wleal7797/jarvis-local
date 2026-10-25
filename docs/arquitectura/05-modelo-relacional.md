@@ -175,7 +175,7 @@ erDiagram
 
 ## Script SQL (referencia)
 
-En la Etapa 2 este esquema se crea con **migraciones de Alembic**. El SQL queda aquí como referencia legible.
+El esquema real se crea con **migraciones de Alembic** a partir de los modelos en `app/models/` (`alembic upgrade head`). El SQL queda aquí como referencia legible. Los nombres de las restricciones en la base siguen la convención de `app/models/base.py` (por ejemplo `ck_users_role`).
 
 ```sql
 CREATE EXTENSION IF NOT EXISTS vector;

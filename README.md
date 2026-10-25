@@ -5,14 +5,17 @@
 
 > 🚧 **Proyecto en construcción.** Se desarrolla por etapas y cada una queda documentada en `docs/`.
 
-**Estado:** 🟡 Etapa 1 terminada: backend MVC con FastAPI
+**Estado:** 🟡 Etapa 2 terminada: PostgreSQL + pgvector
 
 ## Inicio rápido
 
 ```powershell
 & "$env:LOCALAPPDATA\Programs\Python\Python312\python.exe" -m venv .venv
 .\.venv\Scripts\python -m pip install -e ".[dev]"
-copy .env.example .env
+copy .env.example .env                  # y cambia POSTGRES_PASSWORD
+docker compose up -d                    # PostgreSQL + pgvector
+.\.venv\Scripts\alembic upgrade head
+.\.venv\Scripts\python -m scripts.seed
 .\.venv\Scripts\python -m app          # http://127.0.0.1:8000/docs
 .\.venv\Scripts\python -m pytest
 ```
@@ -80,7 +83,7 @@ flowchart LR
 |---|---|---|
 | 0 | Fundaciones: Git, documentación y arquitectura | ✅ |
 | 1 | Backend MVC con FastAPI | ✅ [bitácora](docs/etapas/01-fastapi-mvc.md) |
-| 2 | PostgreSQL + pgvector | ⚪ |
+| 2 | PostgreSQL + pgvector | ✅ [bitácora](docs/etapas/02-postgres-pgvector.md) |
 | 3 | Ollama: modelo de lenguaje local | ⚪ |
 | 4 | Vista web | ⚪ |
 | 5 | Embeddings y RAG | ⚪ |
