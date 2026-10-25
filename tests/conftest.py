@@ -11,7 +11,12 @@ from collections.abc import AsyncIterator
 import pytest
 from alembic import command
 from alembic.config import Config
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.ext.asyncio import (
+    AsyncConnection,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 from sqlalchemy.pool import NullPool
 
 from app.core.config import get_settings
@@ -50,17 +55,30 @@ def test_db_url() -> str:
 
 
 @pytest.fixture
-async def session(test_db_url: str) -> AsyncIterator[AsyncSession]:
-    """Sesión dentro de una transacción que se deshace al final: cada prueba empieza limpia."""
+async def db_connection(test_db_url: str) -> AsyncIterator[AsyncConnection]:
+    """Conexión dentro de una transacción que se deshace al final: cada prueba empieza limpia."""
     engine = create_async_engine(test_db_url, poolclass=NullPool)
     async with engine.connect() as connection:
         transaction = await connection.begin()
-        db_session = AsyncSession(
-            bind=connection, join_transaction_mode="create_savepoint", expire_on_commit=False
-        )
         try:
-            yield db_session
+            yield connection
         finally:
-            await db_session.close()
             await transaction.rollback()
     await engine.dispose()
+
+
+@pytest.fixture
+def session_factory(db_connection: AsyncConnection) -> async_sessionmaker[AsyncSession]:
+    """Fábrica de sesiones sobre la misma conexión: sus `commit()` se convierten en
+    puntos de guardado, así que también se deshacen al terminar la prueba."""
+    return async_sessionmaker(
+        bind=db_connection, join_transaction_mode="create_savepoint", expire_on_commit=False
+    )
+
+
+@pytest.fixture
+async def session(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> AsyncIterator[AsyncSession]:
+    async with session_factory() as db_session:
+        yield db_session

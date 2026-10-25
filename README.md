@@ -5,7 +5,7 @@
 
 > 🚧 **Proyecto en construcción.** Se desarrolla por etapas y cada una queda documentada en `docs/`.
 
-**Estado:** 🟡 Etapa 2 terminada: PostgreSQL + pgvector
+**Estado:** 🟡 Etapa 3 terminada: JARVIS ya conversa (Ollama + streaming + historial)
 
 ## Inicio rápido
 
@@ -15,6 +15,7 @@
 copy .env.example .env                  # y cambia POSTGRES_PASSWORD
 docker compose up -d                    # PostgreSQL + pgvector
 .\.venv\Scripts\alembic upgrade head
+ollama create jarvis:base -f ollama/Modelfile   # personalidad de JARVIS
 .\.venv\Scripts\python -m scripts.seed
 .\.venv\Scripts\python -m app          # http://127.0.0.1:8000/docs
 .\.venv\Scripts\python -m pytest
@@ -84,7 +85,7 @@ flowchart LR
 | 0 | Fundaciones: Git, documentación y arquitectura | ✅ |
 | 1 | Backend MVC con FastAPI | ✅ [bitácora](docs/etapas/01-fastapi-mvc.md) |
 | 2 | PostgreSQL + pgvector | ✅ [bitácora](docs/etapas/02-postgres-pgvector.md) |
-| 3 | Ollama: modelo de lenguaje local | ⚪ |
+| 3 | Ollama: modelo de lenguaje local | ✅ [bitácora](docs/etapas/03-ollama-chat.md) |
 | 4 | Vista web | ⚪ |
 | 5 | Embeddings y RAG | ⚪ |
 | 6 | Ingesta de conocimiento externo | ⚪ |
