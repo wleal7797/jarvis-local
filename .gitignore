@@ -2,8 +2,9 @@
 .env
 .env.*
 !.env.example
-data/
-models/
+# La "/" inicial: sólo las carpetas de la raíz (no app/models, que es código).
+/data/
+/models/
 *.gguf
 *.safetensors
 *.bin
@@ -16,7 +17,7 @@ models/
 *.ogg
 *.dump
 *.sql.gz
-backups/
+/backups/
 secrets/
 caddy/data/
 caddy/config/
@@ -53,9 +54,10 @@ desktop.ini
 .vscode/*
 !.vscode/extensions.json
 !.vscode/settings.json
-logs/
+/logs/
 *.log
 
 # ---------- Herramientas locales ----------
 .claude/
 .jarvis-api.pid
+.jarvis-worker.pid
