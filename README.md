@@ -100,9 +100,9 @@ flowchart LR
 | 6 | Ingesta de conocimiento externo | ✅ [bitácora](docs/etapas/06-ingesta.md) |
 | 7 | Voz a texto (faster-whisper) | ✅ [bitácora](docs/etapas/07-voz-a-texto.md) |
 | 8 | Texto a voz (Piper) | ⚪ |
-| 9 | Palabra de activación "Hey JARVIS" | ⚪ |
-| 10 | Seguridad y acceso en la red local | ⚪ |
-| 11 | Memoria y datos personales | ⚪ |
+| 9 | "Jarvis" siempre atento + conversación fluida | ⚪ |
+| 10 | Memoria: recuerda lo que le cuentas | ⚪ |
+| 11 | Seguridad y acceso en la red local | ⚪ |
 | 12 | Fine-tuning con LoRA | ⚪ |
 | 13 | Herramientas y versión 1.0 | ⚪ |
 

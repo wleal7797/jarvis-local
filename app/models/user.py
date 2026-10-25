@@ -21,7 +21,7 @@ class User(IdMixin, CreatedAtMixin, Base):
 
     username: Mapped[str] = mapped_column(unique=True)
     display_name: Mapped[str]
-    password_hash: Mapped[str]  # Argon2 (Etapa 10)
+    password_hash: Mapped[str]  # Argon2 (Etapa 11)
     role: Mapped[str] = mapped_column(server_default=text("'member'"))
     is_active: Mapped[bool] = mapped_column(server_default=text("true"))
 

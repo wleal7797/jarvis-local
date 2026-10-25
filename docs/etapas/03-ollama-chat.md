@@ -128,7 +128,7 @@ Las mismas 5 preguntas, con la misma personalidad, en los 4 modelos instalados. 
 |---|---|---|
 | Decía que podía controlar dispositivos | El modelo no sabe qué funciones existen | El `SYSTEM` lista lo que puede y no puede hacer. **Hay que actualizarlo en cada etapa** |
 | Tutea a veces aunque se le pida "usted" | Un modelo de 4B sigue el estilo de forma imperfecta | Se agregó un ejemplo (`MESSAGE`). Lo resuelve de verdad el ajuste fino de la **Etapa 12** |
-| Dice "lo tengo en mi memoria personal" | Exagera: sólo recuerda la conversación actual | La memoria de largo plazo llega en la Etapa 11 |
+| Dice "lo tengo en mi memoria personal" | Exagera: sólo recuerda la conversación actual | La memoria de largo plazo llega en la Etapa 10 |
 | `qwen3:4b` ignora `think: false` | Esa variante siempre razona en Ollama 0.40 | Se usa la variante `-instruct` |
 | Pruebas de endpoints chocaban entre sí | Compartían una sola conexión a la BD | Usan conexiones reales y vacían las tablas al final |
 | La conversación de prueba quedó en tu base real | La prueba manual usó la API de verdad | No sale del PC. Se puede borrar con `DELETE /api/conversations/1` |

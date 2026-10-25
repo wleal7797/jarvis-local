@@ -85,7 +85,7 @@ En la vista web se probó toda la ruta del botón (grabar → subir → transcri
 | La primera respuesta después de encender tardó 53 s | Ollama cargaba el modelo de chat y `bge-m3` con 0,8 GB de RAM libre, así que Windows usó el disco | `jarvis.ps1 iniciar` **precarga el modelo de chat** en la GPU |
 | "Harvis" en lugar de "JARVIS" | Whisper no conoce la palabra | `initial_prompt` con el vocabulario de la casa |
 | No cumple "< 2 s" | `small` en CPU tarda 3–5 s | Se prefirió precisión (2,9 % contra 18,7 % de `base`); criterio ajustado |
-| Micrófono desde el celular | Los navegadores sólo lo permiten en `localhost` o con HTTPS | La página lo explica; se resuelve en la Etapa 10 |
+| Micrófono desde el celular | Los navegadores sólo lo permiten en `localhost` o con HTTPS | La página lo explica; se resuelve en la Etapa 11 |
 
 ## Límites conocidos
 - **Las pruebas usan una voz sintética**, clara y sin ruido. Con tu voz, acento, eco o ruido de fondo, la tasa de error será mayor. Conviene repetir la evaluación grabando tus propias frases.

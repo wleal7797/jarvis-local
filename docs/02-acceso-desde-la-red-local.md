@@ -19,7 +19,7 @@ Todo el tráfico se queda **dentro de tu casa**. Nada pasa por internet.
 
 ---
 
-## Lo que haremos (Etapa 10)
+## Lo que haremos (Etapa 11)
 
 ### 1. Escuchar en la red y no sólo en el PC
 La API arranca con `--host 0.0.0.0` en lugar de `127.0.0.1`. Así acepta conexiones de otros dispositivos.

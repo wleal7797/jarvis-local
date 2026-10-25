@@ -91,7 +91,7 @@ Las respuestas del modelo se muestran con `markdown.js`, que **primero escapa to
 | Plantillas con herencia | `base.html` → `chat.html` | La estructura común se escribe una sola vez |
 | WebSocket | `/ws/chat`, `chat.js` | Conexión abierta en ambos sentidos: ideal para respuestas en streaming |
 | `HTTPConnection` en dependencias | `core/dependencies.py` | Las mismas dependencias sirven para HTTP y WebSocket |
-| Rutas relativas para estáticos | plantillas | Funcionan igual detrás del HTTPS de la Etapa 10 |
+| Rutas relativas para estáticos | plantillas | Funcionan igual detrás del HTTPS de la Etapa 11 |
 | `requestAnimationFrame` | `chat.js` | Repintar como máximo 60 veces por segundo aunque lleguen más tokens |
 | Tokens de diseño en CSS | `app.css` | Un tema oscuro completo cambiando sólo variables |
 

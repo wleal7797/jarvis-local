@@ -52,7 +52,7 @@ class Settings(BaseSettings):
     ingestion_allow_internet: bool = True
     uploads_dir: str = "data/uploads"
 
-    # Usuario con el que se conversa hasta que exista el inicio de sesión (Etapa 10).
+    # Usuario con el que se conversa hasta que exista el inicio de sesión (Etapa 11).
     default_username: str = "dueno"
 
     postgres_user: str = "jarvis"

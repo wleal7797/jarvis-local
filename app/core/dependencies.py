@@ -115,7 +115,7 @@ def get_chat_service(
 async def get_current_user(settings: SettingsDep, session: SessionDep) -> User:
     """Usuario que está conversando.
 
-    Mientras no exista el inicio de sesión (Etapa 10), siempre es el usuario por defecto
+    Mientras no exista el inicio de sesión (Etapa 11), siempre es el usuario por defecto
     que crea `scripts/seed.py`.
     """
     user = await UserRepository(session).get_by_username(settings.default_username)
