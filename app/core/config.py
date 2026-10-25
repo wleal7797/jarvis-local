@@ -48,6 +48,12 @@ class Settings(BaseSettings):
     stt_initial_prompt: str = "Conversación en español con JARVIS, el asistente de la casa."
     stt_idle_unload_seconds: int = 300
 
+    # Texto a voz (Etapa 8). Voz elegida escuchando muestras.
+    tts_voices_dir: str = "data/tts/piper"
+    tts_voice: str = "es_ES-davefx-medium"
+    tts_length_scale: float = 1.0
+    tts_idle_unload_seconds: int = 600
+
     # Ingesta (Etapa 6). Apágalo para trabajar 100 % sin conexión.
     ingestion_allow_internet: bool = True
     uploads_dir: str = "data/uploads"

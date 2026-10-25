@@ -10,11 +10,12 @@ El WebSocket de audio continuo llega con la palabra de activación (Etapa 9).
 
 from typing import Annotated
 
-from fastapi import APIRouter, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, File, HTTPException, Response, UploadFile, status
 
-from app.core.dependencies import CurrentUserDep, SpeechToTextDep
-from app.schemas.voice import TranscriptionOut
+from app.core.dependencies import CurrentUserDep, SpeechToTextDep, TextToSpeechDep
+from app.schemas.voice import SpeakIn, TranscriptionOut
 from app.services.stt_service import TranscriptionError
+from app.services.tts_service import SpeechError
 
 router = APIRouter(prefix="/api/voice", tags=["voz"])
 
@@ -41,3 +42,21 @@ async def transcribe(
     except TranscriptionError as exc:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from None
     return TranscriptionOut(**vars(result))
+
+
+@router.post(
+    "/speak",
+    response_class=Response,
+    responses={200: {"content": {"audio/wav": {}}}},
+    summary="Texto a voz: devuelve un WAV con la voz de JARVIS",
+)
+async def speak(body: SpeakIn, user: CurrentUserDep, tts: TextToSpeechDep) -> Response:
+    try:
+        audio = await tts.synthesize(body.text)
+    except SpeechError as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from None
+    return Response(
+        content=audio.wav,
+        media_type="audio/wav",
+        headers={"X-Audio-Seconds": str(audio.audio_seconds)},
+    )

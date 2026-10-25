@@ -5,7 +5,7 @@
 
 > 🚧 **Proyecto en construcción.** Se desarrolla por etapas y cada una queda documentada en `docs/`.
 
-**Estado:** 🟡 Etapa 7 terminada: ya le puedes hablar (micrófono → faster-whisper → chat)
+**Estado:** 🟡 Etapa 8 terminada: le hablas y te responde en voz alta
 
 ## Inicio rápido
 
@@ -18,6 +18,7 @@ docker compose up -d                    # PostgreSQL + pgvector
 ollama create jarvis:base -f ollama/Modelfile   # personalidad de JARVIS
 .\.venv\Scripts\python -m scripts.seed
 .\.venv\Scripts\python -m scripts.index_docs   # conocimiento inicial: la documentación
+.\.venv\Scripts\python -m scripts.download_tts_voices   # voces para hablar (~400 MB)
 .\.venv\Scripts\python -m app          # http://127.0.0.1:8000  (API en /docs)
 .\.venv\Scripts\python -m pytest
 ```
@@ -99,7 +100,7 @@ flowchart LR
 | 5 | Embeddings y RAG | ✅ [bitácora](docs/etapas/05-embeddings-rag.md) |
 | 6 | Ingesta de conocimiento externo | ✅ [bitácora](docs/etapas/06-ingesta.md) |
 | 7 | Voz a texto (faster-whisper) | ✅ [bitácora](docs/etapas/07-voz-a-texto.md) |
-| 8 | Texto a voz (Piper) | ⚪ |
+| 8 | Texto a voz (Piper) | ✅ [bitácora](docs/etapas/08-texto-a-voz.md) |
 | 9 | "Jarvis" siempre atento + conversación fluida | ⚪ |
 | 10 | Memoria: recuerda lo que le cuentas | ⚪ |
 | 11 | Seguridad y acceso en la red local | ⚪ |

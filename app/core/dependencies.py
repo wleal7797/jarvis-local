@@ -25,6 +25,7 @@ from app.services.ingestion import IngestionService
 from app.services.llm import LLMProvider, OllamaProvider
 from app.services.retrieval_service import RetrievalService, RetrievalSettings
 from app.services.stt_service import SpeechToText
+from app.services.tts_service import TextToSpeech
 
 SettingsDep = Annotated[Settings, Depends(get_settings)]
 
@@ -148,3 +149,11 @@ def get_stt(conn: HTTPConnection) -> SpeechToText:
 
 
 SpeechToTextDep = Annotated[SpeechToText, Depends(get_stt)]
+
+
+def get_tts(conn: HTTPConnection) -> TextToSpeech:
+    """Voz compartida por toda la app (se carga al primer uso, ~60 MB)."""
+    return conn.app.state.tts
+
+
+TextToSpeechDep = Annotated[TextToSpeech, Depends(get_tts)]

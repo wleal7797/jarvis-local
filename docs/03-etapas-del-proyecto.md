@@ -151,17 +151,17 @@ flowchart LR
 ---
 
 ## Etapa 8 · Texto a voz (TTS)
-**Tecnología:** Piper o Kokoro (se comparan y **se elige escuchando**).
+**Tecnología:** Piper · voz `es_ES-davefx-medium` (elegida escuchando 7 voces de Piper y Kokoro).
 **Objetivo:** que JARVIS responda hablando, con una voz natural.
 
-**Entregables**
-- `TTSService` con la interfaz `TextToSpeech`.
-- Comparación de voces en español con muestras para escuchar; se elige la que más te guste.
-- Síntesis **por frases**: empieza a hablar mientras el modelo sigue escribiendo.
-- Texto limpio para hablar: sin Markdown, sin citas [1] ni enlaces.
-- Controles en la vista: respuestas en voz alta (sí/no), detener la voz y elegir voz.
+**Entregables** · ✅ [bitácora](etapas/08-texto-a-voz.md)
+- [x] `TTSService` con la interfaz `TextToSpeech`.
+- [x] Comparación de voces en español con muestras para escuchar; se eligió la favorita.
+- [x] Síntesis **por frases**: empieza a hablar mientras el modelo sigue escribiendo.
+- [x] Texto limpio para hablar: sin Markdown, sin citas [1] ni enlaces.
+- [x] Controles en la vista: respuestas en voz alta (sí/no), detener la voz y volver a escuchar. La voz se cambia en `.env` (`TTS_VOICE`).
 
-**Terminado cuando:** JARVIS responde en voz alta y la primera frase suena poco después de que aparece en pantalla.
+**Terminado cuando:** JARVIS responde en voz alta y la primera frase suena poco después de que aparece en pantalla. ✅ ~1,3 s después del texto.
 
 ---
 

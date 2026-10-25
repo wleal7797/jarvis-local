@@ -1,5 +1,6 @@
 """Controlador del chat: conversar con JARVIS y consultar el historial."""
 
+import asyncio
 import json
 import logging
 from collections.abc import AsyncIterator
@@ -8,10 +9,11 @@ from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect, st
 from fastapi.responses import StreamingResponse
 from pydantic import ValidationError
 
-from app.core.dependencies import ChatServiceDep, CurrentUserDep, SessionDep
+from app.core.dependencies import ChatServiceDep, CurrentUserDep, SessionDep, TextToSpeechDep
 from app.repositories import ConversationRepository
 from app.schemas.chat import ChatIn, ConversationOut, MessageOut
 from app.services.chat_service import ChatEvent, ConversationNotFoundError
+from app.services.speech_pipeline import stream_with_voice
 
 logger = logging.getLogger(__name__)
 
@@ -82,14 +84,23 @@ async def delete_conversation(conversation_id: int, user: CurrentUserDep, sessio
 
 
 @ws_router.websocket("/ws/chat")
-async def chat_ws(websocket: WebSocket, user: CurrentUserDep, service: ChatServiceDep) -> None:
+async def chat_ws(
+    websocket: WebSocket, user: CurrentUserDep, service: ChatServiceDep, tts: TextToSpeechDep
+) -> None:
     """Chat en vivo para la vista web.
 
-    El navegador envía `{"message": "...", "conversation_id": 1 | null}` y recibe los mismos
-    eventos que `POST /api/chat` (`start`, `token`, `end`, `error`), uno por mensaje.
+    El navegador envía `{"message": "...", "conversation_id": 1 | null, "voice": true}` y recibe
+    los mismos eventos que `POST /api/chat` (`start`, `sources`, `token`, `end`, `error`).
+    Con `"voice": true` llegan además `audio` (una frase hablada, WAV en base64) y `audio_end`.
     La conexión queda abierta para seguir conversando.
     """
     await websocket.accept()
+    send_lock = asyncio.Lock()  # el texto y el audio se envían desde dos tareas
+
+    async def send(event: ChatEvent) -> None:
+        async with send_lock:
+            await websocket.send_json(event)
+
     try:
         while True:
             raw = await websocket.receive_text()
@@ -104,7 +115,11 @@ async def chat_ws(websocket: WebSocket, user: CurrentUserDep, service: ChatServi
                 except ConversationNotFoundError:
                     await websocket.send_json({"type": "error", "message": NOT_FOUND})
                     continue
-            async for event in service.answer(user.id, body.message, body.conversation_id):
-                await websocket.send_json(event)
+            events = service.answer(user.id, body.message, body.conversation_id)
+            if body.voice:
+                await stream_with_voice(events, tts, send)
+            else:
+                async for event in events:
+                    await send(event)
     except WebSocketDisconnect:
         logger.info("WebSocket cerrado por el navegador")

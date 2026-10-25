@@ -100,6 +100,33 @@
     return { wrap: wrap, bubble: bubble, meta: metaEl };
   }
 
+  // Botón "Escuchar" para volver a oír una respuesta.
+  function addListenButton(el, text) {
+    if (!text || !window.JarvisSpeaker) return;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "listen-btn";
+    button.textContent = "Escuchar";
+    button.setAttribute("aria-label", "Escuchar esta respuesta");
+    button.addEventListener("click", async () => {
+      button.disabled = true;
+      try {
+        const response = await fetch("/api/voice/speak", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: text.slice(0, 2000) }),
+        });
+        if (!response.ok) throw new Error(response.status);
+        window.JarvisSpeaker.playUrl(URL.createObjectURL(await response.blob()));
+      } catch (_) {
+        button.textContent = "Voz no disponible";
+      } finally {
+        button.disabled = false;
+      }
+    });
+    el.meta.append(" · ", button);
+  }
+
   // Fuentes consultadas: las citadas en la respuesta ([1], [2]…) se resaltan.
   function renderSources(wrap, sources, text) {
     if (!sources || !sources.length) return;
@@ -173,6 +200,7 @@
     if (state.reply.frame) cancelAnimationFrame(state.reply.frame);
     state.reply.el.bubble.innerHTML = window.JarvisMarkdown.render(state.reply.text.trim());
     state.reply.el.meta.textContent = formatMeta(end);
+    addListenButton(state.reply.el, state.reply.text.trim());
     renderSources(state.reply.el.wrap, state.reply.sources, state.reply.text);
     state.reply = null;
     setBusy(false);
@@ -229,6 +257,10 @@
             );
           }
         }
+      } else if (data.type === "audio") {
+        if (window.JarvisSpeaker) window.JarvisSpeaker.enqueue(data.audio);
+      } else if (data.type === "audio_error") {
+        console.warn("Voz no disponible:", data.message);
       } else if (data.type === "token") {
         appendToken(data.content);
       } else if (data.type === "end") {
@@ -254,9 +286,16 @@
     if (!message || state.busy || !state.connected) return false;
     addMessage("user", message, options && options.meta);
     if (!state.conversationId) els.title.textContent = message.slice(0, 60);
+    if (window.JarvisSpeaker) window.JarvisSpeaker.stop(); // un mensaje nuevo interrumpe la voz
     startReply();
     setBusy(true);
-    state.ws.send(JSON.stringify({ message: message, conversation_id: state.conversationId }));
+    state.ws.send(
+      JSON.stringify({
+        message: message,
+        conversation_id: state.conversationId,
+        voice: Boolean(window.JarvisSpeaker && window.JarvisSpeaker.enabled()),
+      })
+    );
     els.input.value = "";
     autoGrow();
     updateSendButton();
@@ -328,7 +367,10 @@
       messages.forEach((m) => {
         const meta = m.role === "assistant" ? formatMeta({ latency_ms: m.latency_ms }) : "";
         const added = addMessage(m.role === "user" ? "user" : "assistant", m.content, meta);
-        if (m.role === "assistant") renderSources(added.wrap, m.sources, m.content);
+        if (m.role === "assistant") {
+          addListenButton(added, m.content);
+          renderSources(added.wrap, m.sources, m.content);
+        }
       });
       scrollToBottom(true);
       loadConversations();
