@@ -41,6 +41,10 @@ class Settings(BaseSettings):
     rag_min_similarity: float = 0.5
     rag_min_similarity_with_keywords: float = 0.42
 
+    # Ingesta (Etapa 6). Apágalo para trabajar 100 % sin conexión.
+    ingestion_allow_internet: bool = True
+    uploads_dir: str = "data/uploads"
+
     # Usuario con el que se conversa hasta que exista el inicio de sesión (Etapa 10).
     default_username: str = "dueno"
 

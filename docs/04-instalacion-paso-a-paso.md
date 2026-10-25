@@ -140,8 +140,8 @@ No hace falta instalar esto ahora. Cada etapa lo instala y lo documenta.
 | 2 | Imagen `pgvector/pgvector:pg17` (puerto **5434**, porque 5432 y 5433 ya estaban ocupados) | `docker compose up -d` | ~450 MB |
 | 2 | SQLAlchemy, Alembic, psycopg, `pgvector` (Python) | `pip` | ~50 MB |
 | 5 | *(opcional)* reranker `bge-reranker-v2-m3` (ONNX int8) | descarga automática desde Hugging Face | ~600 MB |
-| 6 | trafilatura, pypdf, python-docx, mwparserfromhell | `pip` | ~80 MB |
-| 6 | Dump de Wikipedia en español | descarga desde `dumps.wikimedia.org` | ~5 GB comprimido |
+| 6 | trafilatura, pypdf, python-docx, python-multipart, psutil | `pip` | ~80 MB |
+| 6 | Artículos de Wikipedia elegidos (API pública, sin descargar el volcado completo) | panel *Conocimiento* | ~50 KB por artículo |
 | 7 | faster-whisper (+ modelo `small`), Silero VAD | `pip` (el modelo se descarga solo la primera vez) | ~600 MB |
 | 8 | Piper + voz `es_MX-ald-medium` | `pip install piper-tts` + archivo `.onnx` de Hugging Face (`rhasspy/piper-voices`) | ~80 MB |
 | 9 | openWakeWord (`hey_jarvis`), sounddevice | `pip` (el modelo se descarga solo) | ~50 MB |

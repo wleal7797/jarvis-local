@@ -6,6 +6,7 @@ Esto permite reemplazar piezas en las pruebas.
 
 from collections.abc import AsyncIterator
 from functools import partial
+from pathlib import Path
 from typing import Annotated
 
 import httpx
@@ -20,6 +21,7 @@ from app.repositories import UserRepository
 from app.services.chat_service import ChatService
 from app.services.embedding_service import Embedder, OllamaEmbedder
 from app.services.health_service import DatabaseProbe, HealthService
+from app.services.ingestion import IngestionService
 from app.services.llm import LLMProvider, OllamaProvider
 from app.services.retrieval_service import RetrievalService, RetrievalSettings
 
@@ -126,3 +128,14 @@ async def get_current_user(settings: SettingsDep, session: SessionDep) -> User:
 
 CurrentUserDep = Annotated[User, Depends(get_current_user)]
 ChatServiceDep = Annotated[ChatService, Depends(get_chat_service)]
+
+
+def get_ingestion_service(settings: SettingsDep, factory: SessionFactoryDep) -> IngestionService:
+    return IngestionService(
+        factory,
+        uploads_dir=Path(settings.uploads_dir),
+        allow_internet=settings.ingestion_allow_internet,
+    )
+
+
+IngestionServiceDep = Annotated[IngestionService, Depends(get_ingestion_service)]

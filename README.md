@@ -5,7 +5,7 @@
 
 > 🚧 **Proyecto en construcción.** Se desarrolla por etapas y cada una queda documentada en `docs/`.
 
-**Estado:** 🟡 Etapa 5 terminada: responde con los documentos y cita sus fuentes (84 % de aciertos contra 6 % sin RAG)
+**Estado:** 🟡 Etapa 6 terminada: aprende de archivos, páginas web y Wikipedia desde el panel *Conocimiento*
 
 ## Inicio rápido
 
@@ -97,7 +97,7 @@ flowchart LR
 | 3 | Ollama: modelo de lenguaje local | ✅ [bitácora](docs/etapas/03-ollama-chat.md) |
 | 4 | Vista web | ✅ [bitácora](docs/etapas/04-vista-web.md) |
 | 5 | Embeddings y RAG | ✅ [bitácora](docs/etapas/05-embeddings-rag.md) |
-| 6 | Ingesta de conocimiento externo | ⚪ |
+| 6 | Ingesta de conocimiento externo | ✅ [bitácora](docs/etapas/06-ingesta.md) |
 | 7 | Voz a texto (faster-whisper) | ⚪ |
 | 8 | Texto a voz (Piper) | ⚪ |
 | 9 | Palabra de activación "Hey JARVIS" | ⚪ |

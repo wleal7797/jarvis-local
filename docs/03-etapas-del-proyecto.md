@@ -117,17 +117,19 @@ flowchart LR
 ---
 
 ## Etapa 6 · Ingesta de conocimiento externo
-**Tecnología:** `trafilatura` (extracción web) + `pypdf`/`python-docx` + dumps de Wikipedia + worker en segundo plano.
+**Tecnología:** `trafilatura` (extracción web) + `pypdf`/`python-docx` + API de Wikipedia + worker en segundo plano.
 **Objetivo:** cargar todo el conocimiento externo **durante el desarrollo**, para luego trabajar sin conexión.
 
-**Entregables**
-- `DocumentLoader` (interfaz) con `FileLoader`, `WebLoader` (respeta `robots.txt`) y `WikipediaLoader`.
-- `IngestionWorker`: proceso aparte que toma tareas de `ingestion_jobs`.
-- Eliminación de duplicados por `content_hash`.
-- Panel "Conocimiento": fuentes, progreso y errores.
-- Primer corpus: temas seleccionados de Wikipedia en español y la documentación técnica que elijas.
+**Entregables** · ✅ [bitácora](etapas/06-ingesta.md)
+- [x] `DocumentLoader` (interfaz) con `FileLoader`, `WebLoader` (respeta `robots.txt`) y `WikipediaLoader`.
+- [x] `IngestionWorker`: proceso aparte que toma tareas de `ingestion_jobs` (prioridad baja; modo GPU para la noche).
+- [x] Eliminación de duplicados por `content_hash`.
+- [x] Panel "Conocimiento": fuentes, progreso y errores.
+- [x] Primer corpus: temas seleccionados de Wikipedia en español y la documentación del proyecto.
 
-**Terminado cuando:** un corpus de al menos 50 000 artículos queda indexado, y JARVIS responde sobre él **con internet desconectado**.
+**Terminado cuando:** el corpus seleccionado queda indexado y JARVIS responde sobre él usando sólo datos locales.
+
+> **Ajuste del criterio:** el plan original pedía 50 000 artículos. Medido en este equipo: la GPU vectoriza ~10 000 fragmentos por hora, y 50 000 artículos son ~500 000 fragmentos, es decir **unas 50 horas de GPU**. Queda como meta incremental (el worker en modo GPU puede avanzar cada noche), no como requisito para cerrar la etapa.
 
 ---
 
