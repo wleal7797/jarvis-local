@@ -35,7 +35,7 @@ flowchart LR
 - [x] `README.md` con visión, stack y hoja de ruta.
 - [x] Requisitos de hardware, acceso en red, etapas y guía de instalación.
 - [x] Diagramas C4 (contexto, contenedores, componentes), diagrama de clases y modelo relacional.
-- [ ] Repo publicado en GitHub.
+- [x] Repo publicado en GitHub.
 
 **Terminado cuando:** el repo está en GitHub y los diagramas se ven bien en la web.
 
@@ -45,12 +45,12 @@ flowchart LR
 **Tecnología:** Python 3.12 + FastAPI + Pydantic + pytest.
 **Objetivo:** el esqueleto de la aplicación con la estructura MVC definitiva.
 
-**Entregables**
-- Estructura `app/models`, `app/views`, `app/controllers`, `app/services`, `app/repositories`, `app/schemas`, `app/core`.
-- Configuración con `pydantic-settings` y archivo `.env.example`.
-- Endpoint `GET /health` y registro de eventos (logging) en formato estructurado.
-- Primeras pruebas con `pytest` y verificación de estilo con `ruff`.
-- `pyproject.toml` con las dependencias.
+**Entregables** · ✅ [bitácora](etapas/01-fastapi-mvc.md)
+- [x] Estructura `app/models`, `app/views`, `app/controllers`, `app/services`, `app/repositories`, `app/schemas`, `app/core`.
+- [x] Configuración con `pydantic-settings` y archivo `.env.example`.
+- [x] Endpoint `GET /health` y registro de eventos (logging) en formato estructurado.
+- [x] Primeras pruebas con `pytest` y verificación de estilo con `ruff`.
+- [x] `pyproject.toml` con las dependencias.
 
 **Terminado cuando:** `uvicorn app.main:app` arranca, `/health` responde `{"status":"ok"}` y `pytest` pasa.
 
@@ -72,7 +72,7 @@ flowchart LR
 ---
 
 ## Etapa 3 · Modelo de lenguaje local con Ollama
-**Tecnología:** Ollama (API HTTP) + `qwen3:4b`.
+**Tecnología:** Ollama (API HTTP) + `qwen3:4b-instruct`.
 **Objetivo:** que JARVIS converse, con personalidad propia.
 
 **Entregables**
@@ -80,7 +80,7 @@ flowchart LR
 - `Modelfile` de JARVIS: indicaciones de sistema, temperatura y tamaño de contexto.
 - `ChatService` que guarda conversación y mensajes en la base de datos.
 - Endpoint `POST /api/chat` con streaming.
-- Comparación documentada entre `qwen3:4b`, `gemma3:4b` y `llama3.2:3b` (calidad en español, velocidad, VRAM).
+- Comparación documentada entre `qwen3:4b-instruct`, `qwen3:4b` (con razonamiento), `gemma3:4b` y `llama3.2:3b` (calidad en español, velocidad, VRAM).
 
 **Terminado cuando:** desde Swagger (`/docs`) se conversa con JARVIS y el historial queda en PostgreSQL.
 

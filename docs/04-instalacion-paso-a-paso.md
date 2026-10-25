@@ -10,10 +10,10 @@ Los comandos van en **PowerShell**. Donde dice *(admin)*, abre PowerShell como a
 | Git 2.45 | ✅ Instalado | — |
 | Python 3.13 | ✅ Instalado | Instalar **también** la 3.12 (paso 2) |
 | Docker 29.8 + WSL 3.0 | ✅ Instalado | Limitar memoria (paso 5) |
-| Ollama 0.40.4 | ✅ Instalado | Actualizar a 0.40.11 (paso 1) |
+| Ollama 0.40.11 | ✅ Instalado (se actualizó solo al reiniciar) | — |
 | GitHub CLI (`gh`) | ❌ Falta | Instalar (paso 3) |
-| Driver NVIDIA 572.83 | ✅ Instalado | — |
-| Modelos en Ollama | `qwen2.5:3b`, `llama3.2`, `nomic-embed-text` | Descargar `qwen3:4b` y `bge-m3` (paso 7) |
+| Driver NVIDIA 572.83 (CUDA 12.8) | ✅ Funciona con Ollama 0.40.11, que trae CUDA 12 | Actualizarlo es opcional |
+| Modelos en Ollama | `qwen2.5:3b`, `llama3.2`, `nomic-embed-text` | Descargar `qwen3:4b-instruct` y `bge-m3` (paso 7) |
 
 ---
 
@@ -82,7 +82,10 @@ setx OLLAMA_MAX_LOADED_MODELS "2"
 setx OLLAMA_NUM_PARALLEL "1"
 setx OLLAMA_FLASH_ATTENTION "1"
 setx OLLAMA_KV_CACHE_TYPE "q8_0"
+setx LLAMA_ARG_FIT_TARGET "256"
 ```
+
+`LLAMA_ARG_FIT_TARGET` es el margen de VRAM (en MB) que Ollama deja libre. El valor por defecto (1024) es demasiado para una GPU de 4 GB: con 256 entran 36 de las 37 capas del modelo en la GPU.
 
 Cierra Ollama desde la bandeja (clic derecho → *Quit*) y vuelve a abrirlo para que tome los valores.
 
@@ -90,14 +93,14 @@ Cierra Ollama desde la bandeja (clic derecho → *Quit*) y vuelve a abrirlo para
 
 | Modelo | Para qué | Tamaño | Comando |
 |---|---|---|---|
-| `qwen3:4b` | Chat principal de JARVIS (muy bueno en español, razona) | 2,5 GB | `ollama pull qwen3:4b` |
+| `qwen3:4b-instruct` | Chat principal de JARVIS: muy bueno en español y responde directo, sin "pensar en voz alta" | 2,5 GB | `ollama pull qwen3:4b-instruct` |
 | `bge-m3` | Embeddings multilingües para pgvector (1024 dimensiones) | 1,2 GB | `ollama pull bge-m3` |
 | `gemma3:4b` *(opcional)* | Para comparar en la Etapa 3 | 3,3 GB | `ollama pull gemma3:4b` |
 
 Comprueba que el modelo de chat corre en la GPU:
 
 ```powershell
-ollama run qwen3:4b "Preséntate en una frase como JARVIS"
+ollama run qwen3:4b-instruct "Preséntate en una frase como JARVIS"
 ollama ps          # la columna PROCESSOR debe decir 100% GPU
 ```
 
@@ -151,7 +154,7 @@ git --version
 py -3.12 --version
 gh auth status
 docker run --rm hello-world
-ollama list        # debe incluir qwen3:4b y bge-m3
+ollama list        # debe incluir qwen3:4b-instruct y bge-m3
 ```
 
 Si todo responde sin errores, estás listo para la **Etapa 1**.

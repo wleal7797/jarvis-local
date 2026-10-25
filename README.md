@@ -5,7 +5,19 @@
 
 > 🚧 **Proyecto en construcción.** Se desarrolla por etapas y cada una queda documentada en `docs/`.
 
-**Estado:** 🟡 Etapa 0: fundaciones y arquitectura
+**Estado:** 🟡 Etapa 1 terminada: backend MVC con FastAPI
+
+## Inicio rápido
+
+```powershell
+& "$env:LOCALAPPDATA\Programs\Python\Python312\python.exe" -m venv .venv
+.\.venv\Scripts\python -m pip install -e ".[dev]"
+copy .env.example .env
+.\.venv\Scripts\python -m app          # http://127.0.0.1:8000/docs
+.\.venv\Scripts\python -m pytest
+```
+
+Requisitos previos: ver la [guía de instalación](docs/04-instalacion-paso-a-paso.md).
 
 ---
 
@@ -21,7 +33,7 @@
 
 | Capa | Tecnología |
 |---|---|
-| Modelo de lenguaje | [Ollama](https://ollama.com) + `qwen3:4b` |
+| Modelo de lenguaje | [Ollama](https://ollama.com) + `qwen3:4b-instruct` |
 | Embeddings | `bge-m3` (multilingüe, 1024 dimensiones) |
 | Base de datos | PostgreSQL 17 + [pgvector](https://github.com/pgvector/pgvector) (Docker) |
 | Backend (MVC) | Python 3.12 · FastAPI · SQLAlchemy 2 · Alembic |
@@ -39,7 +51,7 @@ flowchart LR
   U((Usuario)) -->|HTTPS LAN| P[Caddy]
   P --> A[API FastAPI · MVC]
   M((Micrófono del PC)) --> VA[Agente de voz<br/>hey jarvis] -->|WebSocket| A
-  A --> O[Ollama<br/>qwen3:4b · bge-m3]
+  A --> O[Ollama<br/>qwen3:4b-instruct · bge-m3]
   A --> D[(PostgreSQL<br/>+ pgvector)]
   W[Worker de ingesta] --> D
   W --> O
@@ -66,8 +78,8 @@ flowchart LR
 
 | Etapa | Tecnología | Estado |
 |---|---|---|
-| 0 | Fundaciones: Git, documentación y arquitectura | 🟡 En curso |
-| 1 | Backend MVC con FastAPI | ⚪ |
+| 0 | Fundaciones: Git, documentación y arquitectura | ✅ |
+| 1 | Backend MVC con FastAPI | ✅ [bitácora](docs/etapas/01-fastapi-mvc.md) |
 | 2 | PostgreSQL + pgvector | ⚪ |
 | 3 | Ollama: modelo de lenguaje local | ⚪ |
 | 4 | Vista web | ⚪ |
