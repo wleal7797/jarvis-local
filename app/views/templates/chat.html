@@ -64,11 +64,15 @@
     <form class="composer" id="composer" autocomplete="off">
       <label class="visually-hidden" for="input">Mensaje para JARVIS</label>
       <textarea id="input" name="message" rows="1" maxlength="4000" placeholder="Escriba un mensaje…" required></textarea>
+      <button class="mic-btn" id="mic" type="button" aria-label="Hablar con JARVIS" aria-pressed="false" title="Hablar (Esc para cancelar)">
+        <svg aria-hidden="true" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+      </button>
       <button class="send-btn" id="send" type="submit" aria-label="Enviar mensaje" disabled>
         <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
       </button>
     </form>
-    <p class="composer__hint">Enter para enviar · Shift + Enter para nueva línea</p>
+    <p class="voice-status" id="voice-status" role="status" aria-live="polite" hidden></p>
+    <p class="composer__hint">Enter para enviar · Shift + Enter para nueva línea · micrófono para hablar</p>
   </main>
 </div>
 {% endblock %}
@@ -76,4 +80,5 @@
 {% block scripts %}
 <script src="/static/js/markdown.js?v={{ v }}"></script>
 <script src="/static/js/chat.js?v={{ v }}"></script>
+<script src="/static/js/voice.js?v={{ v }}"></script>
 {% endblock %}
