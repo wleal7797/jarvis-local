@@ -78,9 +78,41 @@ Medido por el WebSocket, como lo usa el navegador:
 
 - ✅ **El audio llega ~1,3 s después del texto** y cada frase se genera en ~0,3 s
 - ✅ En el navegador: voz, "Detener", "Escuchar" y el interruptor de voz probados, sin errores en la consola
-- ✅ `pytest`: 116 pruebas · `ruff` sin errores
+- ✅ `pytest`: 129 pruebas · `ruff` sin errores
 
 **Conclusión para la Etapa 9:** la conversación normal ya es fluida (~2 s). Lo lento son las preguntas que consultan documentos (~10 s), porque esta GPU lee el contexto a ~250 tokens/s. Optimizarlo es parte de la "conversación fluida".
+
+## Ajustes después de probarlo
+
+Al probarlo, el dueño pidió tres cosas:
+
+### 1. Que trate de "usted" siempre
+
+Se creó `scripts/evaluate_style.py`: 13 preguntas típicas y un detector de formas de tú ("te", "tu", "puedes", "ayudarte", "contigo"…).
+
+| Versión del Modelfile | Respuestas que tutean |
+|---|---|
+| Antes (regla "tratas de usted" + 1 ejemplo) | **5 de 12** |
+| Regla destacada con ejemplos de qué decir y qué no + 5 conversaciones de ejemplo + temperatura 0,5 | 0 de 12, pero "recordaba" los temas de los ejemplos (una entrevista) como si fueran reales |
+| **Regla destacada + 3 ejemplos genéricos + temperatura 0,5** ✅ | **0 de 13** |
+
+Lección: para Ollama, los `MESSAGE` del Modelfile son **historial real**. Deben ser genéricos, o JARVIS los "recuerda".
+
+### 2. Que diga su nombre en inglés: "Yarbis"
+
+`clean_for_speech` cambia "JARVIS", "Jarvis" y "J.A.R.V.I.S." por **"Yárbis"** antes de hablar: la tilde pone el acento en la primera sílaba, como en inglés. "Jarvisito" o "jarabe" no se tocan.
+
+### 3. Que entienda cuando le dicen "Yarbis"
+
+Con la voz de Windows diciendo "Yarbis, ¿cómo estás?", "Gracias Yarbis"… Whisper escribió **Jarvis en 5 de 5 frases**, gracias a la pista. Ahora la pista dice además *"Jarvis (se pronuncia Yarbis)"*. Como red de seguridad, `normalize_name` corrige "Yarbis", "Yarvis", "Harvis" o "Llarvis" a "Jarvis" en la transcripción (lo usará también la palabra de activación de la Etapa 9).
+
+### Cambiar la voz es fácil
+
+| Dónde | Cómo |
+|---|---|
+| **En el chat** | Barra lateral → **Voz de JARVIS**: elige entre las voces descargadas, ajusta la velocidad y toca **Probar**. Se aplica al instante y se recuerda (`data/preferences.json`) |
+| **Más voces** | `python -m scripts.download_tts_voices --list` (todas las voces en español de Piper) y `--voice <nombre>` |
+| API | `GET /api/voice/settings` y `PUT /api/voice/settings` |
 
 ## Problemas encontrados
 

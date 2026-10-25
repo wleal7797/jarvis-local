@@ -433,3 +433,21 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
   .stats { grid-template-columns: minmax(0, 1fr); gap: 6px; }
   .stat { grid-template-columns: auto minmax(0, 1fr); align-items: baseline; gap: 8px; padding: 8px 14px; }
 }
+
+
+/* Diálogo de ajustes (voz) */
+button.nav-link { width: 100%; background: none; border: 0; text-align: left; cursor: pointer; }
+.dialog {
+  width: min(440px, calc(100vw - 32px)); padding: 0; border: 1px solid var(--border);
+  border-radius: var(--radius); background: var(--surface); color: var(--text); box-shadow: var(--shadow);
+}
+.dialog::backdrop { background: rgba(0, 0, 0, 0.5); }
+.dialog__body { display: grid; gap: 14px; padding: 20px; }
+.dialog__body h2 { margin: 0; font-size: 18px; }
+.dialog__body select, .dialog__body input[type="range"] { width: 100%; }
+.dialog__body select { padding: 9px 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); color: var(--text); font: inherit; }
+.dialog__body input[type="range"] { accent-color: var(--accent); }
+.field__value { font-weight: 400; color: var(--muted); }
+.range-labels { display: flex; justify-content: space-between; font-size: 12px; font-weight: 400; color: var(--muted); }
+.dialog__body .hint code { font-size: 12px; }
+.dialog__actions { display: flex; justify-content: flex-end; gap: 8px; }

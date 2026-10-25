@@ -13,7 +13,8 @@ from typing import Annotated
 from fastapi import APIRouter, File, HTTPException, Response, UploadFile, status
 
 from app.core.dependencies import CurrentUserDep, SpeechToTextDep, TextToSpeechDep
-from app.schemas.voice import SpeakIn, TranscriptionOut
+from app.core.preferences import save_preferences
+from app.schemas.voice import SpeakIn, TranscriptionOut, VoiceSettingsIn, VoiceSettingsOut
 from app.services.stt_service import TranscriptionError
 from app.services.tts_service import SpeechError
 
@@ -60,3 +61,28 @@ async def speak(body: SpeakIn, user: CurrentUserDep, tts: TextToSpeechDep) -> Re
         media_type="audio/wav",
         headers={"X-Audio-Seconds": str(audio.audio_seconds)},
     )
+
+
+def _settings_out(tts) -> VoiceSettingsOut:
+    return VoiceSettingsOut(
+        voice=tts.voice_name, length_scale=tts.length_scale, installed=tts.installed_voices()
+    )
+
+
+@router.get("/settings", response_model=VoiceSettingsOut, summary="Voz actual y voces instaladas")
+async def get_voice_settings(user: CurrentUserDep, tts: TextToSpeechDep):
+    return _settings_out(tts)
+
+
+@router.put(
+    "/settings",
+    response_model=VoiceSettingsOut,
+    summary="Cambiar la voz o la velocidad (se aplica al instante y se recuerda)",
+)
+async def update_voice_settings(body: VoiceSettingsIn, user: CurrentUserDep, tts: TextToSpeechDep):
+    try:
+        tts.configure(voice=body.voice, length_scale=body.length_scale)
+    except SpeechError as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from None
+    save_preferences({"tts_voice": tts.voice_name, "tts_length_scale": tts.length_scale})
+    return _settings_out(tts)

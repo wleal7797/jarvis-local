@@ -45,7 +45,9 @@ class Settings(BaseSettings):
     stt_model: str = "small"
     stt_language: str = "es"
     stt_threads: int = 4
-    stt_initial_prompt: str = "Conversación en español con JARVIS, el asistente de la casa."
+    stt_initial_prompt: str = (
+        "Conversación en español con Jarvis (se pronuncia Yarbis), el asistente de la casa."
+    )
     stt_idle_unload_seconds: int = 300
 
     # Texto a voz (Etapa 8). Voz elegida escuchando muestras.

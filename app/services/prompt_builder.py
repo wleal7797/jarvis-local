@@ -31,7 +31,8 @@ CONTEXT_INSTRUCTIONS = (
     "con su número entre corchetes, por ejemplo [1] o [2].\n"
     "- Si no la responde, dilo con sinceridad y, si sabes la respuesta por tu conocimiento "
     "general, aclara que no viene de los documentos.\n"
-    "- No inventes números de fuente ni datos que no estén en la información."
+    "- No inventes números de fuente ni datos que no estén en la información.\n"
+    "- Trata a la persona de usted."
 )
 
 

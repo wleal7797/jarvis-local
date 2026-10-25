@@ -1,11 +1,16 @@
-"""Descarga las voces en español para texto a voz (una sola vez).
+"""Descarga voces en español para texto a voz.
 
-    .venv\\Scripts\\python -m scripts.download_tts_voices
+    .venv\\Scripts\\python -m scripts.download_tts_voices                    # voces por defecto
+    .venv\\Scripts\\python -m scripts.download_tts_voices --list             # todas en español
+    .venv\\Scripts\\python -m scripts.download_tts_voices --voice es_ES-sharvard-medium
+
+Después elige la voz en el chat: barra lateral → "Voz de JARVIS".
 Quedan en data/tts/ (no se suben a Git). Fuentes:
 - Piper: https://huggingface.co/rhasspy/piper-voices (licencias en cada MODEL_CARD)
 - Kokoro: https://github.com/thewh1teagle/kokoro-onnx/releases (Apache 2.0)
 """
 
+import argparse
 import json
 import sys
 from pathlib import Path
@@ -13,7 +18,8 @@ from pathlib import Path
 import httpx
 
 TTS_DIR = Path("data/tts")
-PIPER_BASE = "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/es"
+PIPER_ROOT = "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0"
+PIPER_BASE = f"{PIPER_ROOT}/es"
 PIPER_VOICES = {
     "es_MX-claude-high": "es_MX/claude/high",
     "es_MX-ald-medium": "es_MX/ald/medium",
@@ -55,7 +61,46 @@ def fix_piper_config(path: Path) -> None:
         print(f"  (corregido phoneme_type en {path.name})")
 
 
+def piper_catalog(client: httpx.Client) -> dict:
+    response = client.get(f"{PIPER_ROOT}/voices.json", follow_redirects=True)
+    response.raise_for_status()
+    return response.json()
+
+
+def list_spanish(client: httpx.Client) -> None:
+    catalog = piper_catalog(client)
+    installed = {p.stem for p in (TTS_DIR / "piper").glob("*.onnx")}
+    print(f"{'Voz':32} {'Calidad':8} {'Voces':5} Instalada")
+    for name, info in sorted(catalog.items()):
+        if info.get("language", {}).get("family") != "es":
+            continue
+        mark = "sí" if name in installed else ""
+        print(f"{name:32} {info.get('quality', ''):8} {info.get('num_speakers', 1):5} {mark}")
+
+
+def download_one(client: httpx.Client, name: str) -> None:
+    catalog = piper_catalog(client)
+    if name not in catalog:
+        sys.exit(f"No existe la voz {name}. Usa --list para ver las disponibles.")
+    for path in catalog[name]["files"]:
+        if path.endswith((".onnx", ".onnx.json")):
+            download(client, f"{PIPER_ROOT}/{path}", TTS_DIR / "piper" / Path(path).name)
+    fix_piper_config(TTS_DIR / "piper" / f"{name}.onnx.json")
+    print(f"Lista. Elígela en el chat: barra lateral → 'Voz de JARVIS' ({name}).")
+
+
 def main() -> None:
+    parser = argparse.ArgumentParser(description="Voces de Piper para JARVIS")
+    parser.add_argument("--list", action="store_true", help="ver todas las voces en español")
+    parser.add_argument("--voice", help="descargar una voz por su nombre")
+    args = parser.parse_args()
+    if args.list or args.voice:
+        with httpx.Client(timeout=600) as client:
+            if args.list:
+                list_spanish(client)
+            if args.voice:
+                download_one(client, args.voice)
+        return
     with httpx.Client(timeout=600) as client:
         for name, path in PIPER_VOICES.items():
             for suffix in (".onnx", ".onnx.json"):

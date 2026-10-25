@@ -35,7 +35,9 @@ pytestmark = pytest.mark.anyio
         ("**Importante:** usa `pytest`", "Importante: usa pytest"),
         ("## Título\n- uno\n- dos", "Título\nuno\ndos"),
         ("Mira https://ejemplo.com/x ahora", "Mira el enlace en pantalla ahora"),
-        ("Soy JARVIS 🤖", "Soy Jarvis"),
+        ("Soy JARVIS 🤖", "Soy Yárbis"),
+        ("J.A.R.V.I.S. a su servicio. Diga: Jarvis.", "Yárbis a su servicio. Diga: Yárbis."),
+        ("Jarvisito y jarabe no cambian", "Jarvisito y jarabe no cambian"),
     ],
 )
 def test_limpia_lo_que_no_se_debe_leer(raw: str, spoken: str):
@@ -239,3 +241,42 @@ async def test_endpoint_speak_devuelve_wav():
     assert ok.status_code == 200 and ok.headers["content-type"] == "audio/wav"
     assert ok.content.startswith(b"RIFF") and ok.headers["x-audio-seconds"] == "1.0"
     assert empty.status_code == 422
+
+
+# ---------- Cambiar de voz ----------
+
+
+async def test_lista_voces_instaladas_y_cambia_en_caliente(tmp_path):
+    for name in ("es_ES-davefx-medium", "es_MX-claude-high"):
+        (tmp_path / f"{name}.onnx").write_bytes(b"x")
+    voice = FakeVoice()
+    loads: list = []
+    tts = PiperTTS(
+        PiperSettings(voices_dir=str(tmp_path), voice="es_ES-davefx-medium"),
+        voice_loader=lambda cfg: loads.append(cfg.voice) or voice,
+    )
+    assert [v["name"] for v in tts.installed_voices()] == [
+        "es_ES-davefx-medium",
+        "es_MX-claude-high",
+    ]
+    assert tts.installed_voices()[1] == {
+        "name": "es_MX-claude-high",
+        "language": "es_MX",
+        "speaker": "claude",
+        "quality": "high",
+    }
+
+    await tts.synthesize("Primera frase de prueba.")
+    tts.configure(voice="es_MX-claude-high", length_scale=1.2)
+    await tts.synthesize("Segunda frase de prueba.")
+
+    assert loads == ["es_ES-davefx-medium", "es_MX-claude-high"]  # recargó la nueva voz
+    assert voice.configs[-1].length_scale == 1.2
+
+
+def test_no_acepta_voces_no_instaladas_ni_velocidades_raras(tmp_path):
+    tts = PiperTTS(PiperSettings(voices_dir=str(tmp_path)))
+    with pytest.raises(SpeechError, match="no está descargada"):
+        tts.configure(voice="es_XX-nadie-low")
+    with pytest.raises(SpeechError, match="velocidad"):
+        tts.configure(length_scale=5)

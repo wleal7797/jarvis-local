@@ -50,6 +50,9 @@ _HEADING = re.compile(r"^\s{0,3}#{1,6}\s*", re.MULTILINE)
 _BULLET = re.compile(r"^\s*(?:[-*•]|\d+[.)])\s+", re.MULTILINE)
 _EMOJI = re.compile("[\U0001f300-\U0001faff\U00002600-\U000027bf\U0001f000-\U0001f2ff]")
 _SPACES = re.compile(r"[ \t]+")
+# El nombre se dice en inglés: "Yárbis" (la tilde marca el acento, como en inglés: YAR-bis).
+_NAME = re.compile(r"\b(?:J\.A\.R\.V\.I\.S\.|jarvis\b)", re.IGNORECASE)
+NAME_PRONUNCIATION = "Yárbis"
 
 
 def clean_for_speech(text: str) -> str:
@@ -60,7 +63,7 @@ def clean_for_speech(text: str) -> str:
     text = _BULLET.sub("", text)
     text = _MARKDOWN.sub("", text)
     text = _EMOJI.sub("", text)
-    text = text.replace("JARVIS", "Jarvis")  # en mayúsculas lo deletrea
+    text = _NAME.sub(NAME_PRONUNCIATION, text)
     return _SPACES.sub(" ", text).strip()
 
 
@@ -136,8 +139,48 @@ class PiperTTS:
         return self._cfg.voice
 
     @property
+    def length_scale(self) -> float:
+        return self._cfg.length_scale
+
+    @property
     def loaded(self) -> bool:
         return self._voice is not None
+
+    def installed_voices(self) -> list[dict[str, str]]:
+        """Voces de Piper descargadas en `voices_dir` (cada una es un .onnx + su .json)."""
+        voices = []
+        for model in sorted(Path(self._cfg.voices_dir).glob("*.onnx")):
+            name = model.stem  # es_ES-davefx-medium
+            parts = name.split("-")
+            voices.append(
+                {
+                    "name": name,
+                    "language": parts[0] if parts else "",
+                    "speaker": parts[1] if len(parts) > 1 else name,
+                    "quality": parts[2] if len(parts) > 2 else "",
+                }
+            )
+        return voices
+
+    def configure(self, voice: str | None = None, length_scale: float | None = None) -> None:
+        """Cambia la voz o la velocidad en caliente (la próxima frase ya usa la nueva)."""
+        if voice is not None and voice not in {v["name"] for v in self.installed_voices()}:
+            raise SpeechError(f"La voz {voice} no está descargada")
+        if length_scale is not None and not 0.5 <= length_scale <= 2.0:
+            raise SpeechError("La velocidad debe estar entre 0.5 y 2.0")
+        with self._lock:
+            new_voice = voice or self._cfg.voice
+            if new_voice != self._cfg.voice:
+                self._voice = None  # se carga la nueva en la próxima frase
+            self._cfg = PiperSettings(
+                voices_dir=self._cfg.voices_dir,
+                voice=new_voice,
+                length_scale=length_scale if length_scale is not None else self._cfg.length_scale,
+                idle_unload_seconds=self._cfg.idle_unload_seconds,
+            )
+        logger.info(
+            "voz configurada", extra={"voice": new_voice, "length_scale": self._cfg.length_scale}
+        )
 
     async def synthesize(self, text: str) -> SpeechAudio:
         spoken = clean_for_speech(text)

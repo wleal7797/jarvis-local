@@ -16,6 +16,10 @@
         <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h12v16H6a2 2 0 0 0-2 2z"/><path d="M4 21V5M8 7h6"/></svg>
         Conocimiento
       </a>
+      <button class="nav-link" id="open-voice-settings" type="button">
+        <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg>
+        Voz de JARVIS
+      </button>
     </div>
     <nav class="conversations" id="conversations" aria-label="Historial">
       <p class="conversations__empty" id="conversations-empty">Aún no hay conversaciones.</p>
@@ -30,6 +34,25 @@
     </footer>
   </aside>
   <div class="scrim" id="scrim" hidden></div>
+
+  <dialog class="dialog" id="voice-settings" aria-labelledby="voice-settings-title">
+    <form method="dialog" class="dialog__body" id="voice-form">
+      <h2 id="voice-settings-title">Voz de JARVIS</h2>
+      <label class="field">Voz
+        <select id="voice-select"></select>
+      </label>
+      <label class="field">Velocidad <span class="field__value" id="speed-value"></span>
+        <input type="range" id="speed" min="0.8" max="1.3" step="0.05">
+        <span class="range-labels"><span>Más rápida</span><span>Más pausada</span></span>
+      </label>
+      <p class="hint">¿Más voces? En la terminal:<br><code>python -m scripts.download_tts_voices --list</code><br><code>python -m scripts.download_tts_voices --voice es_MX-claude-high</code></p>
+      <p class="form-message" id="voice-message" role="status" aria-live="polite"></p>
+      <div class="dialog__actions">
+        <button class="btn" type="button" id="voice-test">Probar</button>
+        <button class="btn btn--primary" type="submit" value="close">Listo</button>
+      </div>
+    </form>
+  </dialog>
 
   <main class="chat">
     <header class="chat__header">
@@ -90,4 +113,5 @@
 <script src="/static/js/speaker.js?v={{ v }}"></script>
 <script src="/static/js/chat.js?v={{ v }}"></script>
 <script src="/static/js/voice.js?v={{ v }}"></script>
+<script src="/static/js/voice-settings.js?v={{ v }}"></script>
 {% endblock %}
