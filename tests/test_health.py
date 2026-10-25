@@ -44,9 +44,9 @@ def get_health(**kwargs) -> dict:
     return response.json()
 
 
-def test_root_responde():
+def test_api_root_responde():
     with make_client() as client:
-        response = client.get("/")
+        response = client.get("/api")
     assert response.status_code == 200
     assert response.json()["health"] == "/health"
 

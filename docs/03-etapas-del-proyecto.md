@@ -87,13 +87,13 @@ flowchart LR
 ---
 
 ## Etapa 4 · Vista web (la "V" de MVC)
-**Tecnología:** Jinja2 + HTMX + WebSocket + CSS propio.
+**Tecnología:** Jinja2 + WebSocket + JavaScript y CSS propios (sin librerías externas: funciona sin internet).
 **Objetivo:** una interfaz para conversar desde el navegador.
 
-**Entregables**
-- Plantillas: `base.html`, `chat.html` y la lista de conversaciones.
-- Respuestas que aparecen palabra por palabra (WebSocket).
-- Diseño adaptable a celular, con tema claro y oscuro.
+**Entregables** · ✅ [bitácora](etapas/04-vista-web.md)
+- [x] Plantillas: `base.html`, `chat.html` y la lista de conversaciones.
+- [x] Respuestas que aparecen palabra por palabra (WebSocket).
+- [x] Diseño adaptable a celular, con tema claro y oscuro.
 
 **Terminado cuando:** se conversa desde el navegador del PC y se ve bien en pantalla de celular.
 

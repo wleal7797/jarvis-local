@@ -9,8 +9,9 @@ from functools import partial
 from typing import Annotated
 
 import httpx
-from fastapi import Depends, HTTPException, Request, status
+from fastapi import Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
+from starlette.requests import HTTPConnection
 
 from app.core.config import Settings, get_settings
 from app.core.database import ping, session_scope
@@ -23,17 +24,20 @@ from app.services.llm import LLMProvider, OllamaProvider
 SettingsDep = Annotated[Settings, Depends(get_settings)]
 
 
-def get_http_client(request: Request) -> httpx.AsyncClient:
+# `HTTPConnection` sirve tanto para peticiones HTTP como para WebSocket.
+
+
+def get_http_client(conn: HTTPConnection) -> httpx.AsyncClient:
     """Cliente HTTP compartido, creado al arrancar la app (ver `lifespan` en main.py)."""
-    return request.app.state.http
+    return conn.app.state.http
 
 
-def get_engine(request: Request) -> AsyncEngine:
-    return request.app.state.engine
+def get_engine(conn: HTTPConnection) -> AsyncEngine:
+    return conn.app.state.engine
 
 
-def get_session_factory(request: Request) -> async_sessionmaker[AsyncSession]:
-    return request.app.state.session_factory
+def get_session_factory(conn: HTTPConnection) -> async_sessionmaker[AsyncSession]:
+    return conn.app.state.session_factory
 
 
 async def get_session(
