@@ -100,6 +100,37 @@
     return { wrap: wrap, bubble: bubble, meta: metaEl };
   }
 
+  // Fuentes consultadas: las citadas en la respuesta ([1], [2]…) se resaltan.
+  function renderSources(wrap, sources, text) {
+    if (!sources || !sources.length) return;
+    const cited = new Set((text.match(/\[(\d{1,2})\]/g) || []).map((m) => Number(m.slice(1, -1))));
+    const details = document.createElement("details");
+    details.className = "sources";
+    const summary = document.createElement("summary");
+    summary.textContent = cited.size
+      ? "Fuentes citadas: " + cited.size + " de " + sources.length
+      : "Documentos consultados: " + sources.length;
+    details.appendChild(summary);
+    const list = document.createElement("ol");
+    sources.forEach((s) => {
+      const li = document.createElement("li");
+      li.value = s.n;
+      if (cited.has(s.n)) li.className = "is-cited";
+      const label = [s.title, s.section].filter(Boolean).join(" › ");
+      li.textContent = label || "Documento " + s.n;
+      if (s.similarity != null) {
+        const score = document.createElement("span");
+        score.className = "sources__score";
+        score.textContent = Math.round(s.similarity * 100) + " %";
+        score.title = "Parecido con la pregunta";
+        li.appendChild(score);
+      }
+      list.appendChild(li);
+    });
+    details.appendChild(list);
+    wrap.insertBefore(details, wrap.querySelector(".msg__meta"));
+  }
+
   function startReply() {
     const reply = addMessage("assistant", "");
     reply.bubble.innerHTML = '<span class="typing" aria-label="JARVIS está escribiendo"><span></span><span></span><span></span></span>';
@@ -142,6 +173,7 @@
     if (state.reply.frame) cancelAnimationFrame(state.reply.frame);
     state.reply.el.bubble.innerHTML = window.JarvisMarkdown.render(state.reply.text.trim());
     state.reply.el.meta.textContent = formatMeta(end);
+    renderSources(state.reply.el.wrap, state.reply.sources, state.reply.text);
     state.reply = null;
     setBusy(false);
     loadConversations();
@@ -185,6 +217,18 @@
         const isNew = state.conversationId !== data.conversation_id;
         state.conversationId = data.conversation_id;
         if (isNew) history.replaceState(null, "", "#c=" + data.conversation_id);
+      } else if (data.type === "sources") {
+        if (state.reply) {
+          state.reply.sources = data.sources;
+          if (state.reply.text === "") {
+            clearWakeTimer();
+            const n = data.sources.length;
+            state.reply.el.bubble.insertAdjacentHTML(
+              "beforeend",
+              '<span class="waking">Consultando ' + n + (n === 1 ? " documento…" : " documentos…") + "</span>"
+            );
+          }
+        }
       } else if (data.type === "token") {
         appendToken(data.content);
       } else if (data.type === "end") {
@@ -276,7 +320,8 @@
       setWelcome(messages.length === 0);
       messages.forEach((m) => {
         const meta = m.role === "assistant" ? formatMeta({ latency_ms: m.latency_ms }) : "";
-        addMessage(m.role === "user" ? "user" : "assistant", m.content, meta);
+        const added = addMessage(m.role === "user" ? "user" : "assistant", m.content, meta);
+        if (m.role === "assistant") renderSources(added.wrap, m.sources, m.content);
       });
       scrollToBottom(true);
       loadConversations();

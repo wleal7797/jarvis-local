@@ -9,11 +9,11 @@ from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
-from app.core.dependencies import get_llm, get_session_factory
+from app.core.dependencies import get_embedder, get_llm, get_session_factory
 from app.main import create_app
 from app.models import Message, ModelVersion, User
 from app.services.chat_service import ChatService, ConversationNotFoundError
-from tests.fakes import FakeLLM
+from tests.fakes import FakeEmbedder, FakeLLM
 
 pytestmark = [pytest.mark.anyio, pytest.mark.db]
 
@@ -127,6 +127,7 @@ def client(app_session_factory: async_sessionmaker) -> httpx.AsyncClient:
     app = create_app()
     app.dependency_overrides[get_session_factory] = lambda: app_session_factory
     app.dependency_overrides[get_llm] = lambda: FakeLLM("Con gusto.")
+    app.dependency_overrides[get_embedder] = lambda: FakeEmbedder()
     return httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test")
 
 

@@ -18,8 +18,10 @@ from app.core.database import ping, session_scope
 from app.models import User
 from app.repositories import UserRepository
 from app.services.chat_service import ChatService
+from app.services.embedding_service import Embedder, OllamaEmbedder
 from app.services.health_service import DatabaseProbe, HealthService
 from app.services.llm import LLMProvider, OllamaProvider
+from app.services.retrieval_service import RetrievalService, RetrievalSettings
 
 SettingsDep = Annotated[Settings, Depends(get_settings)]
 
@@ -69,12 +71,40 @@ def get_llm(settings: SettingsDep, http: HttpClientDep) -> LLMProvider:
     return OllamaProvider(http, settings.ollama_base_url, settings.ollama_chat_model)
 
 
+def get_embedder(settings: SettingsDep, http: HttpClientDep) -> Embedder:
+    return OllamaEmbedder(
+        http,
+        settings.ollama_base_url,
+        settings.ollama_embed_model,
+        use_gpu=settings.ollama_embed_on_gpu,
+    )
+
+
+EmbedderDep = Annotated[Embedder, Depends(get_embedder)]
+
+
+def retrieval_settings(settings: Settings) -> RetrievalSettings:
+    return RetrievalSettings(
+        top_k=settings.rag_top_k,
+        min_similarity=settings.rag_min_similarity,
+        min_similarity_with_keywords=settings.rag_min_similarity_with_keywords,
+    )
+
+
 def get_chat_service(
     settings: SettingsDep,
     factory: SessionFactoryDep,
     llm: Annotated[LLMProvider, Depends(get_llm)],
+    embedder: EmbedderDep,
 ) -> ChatService:
-    return ChatService(factory, llm, settings.ollama_chat_model)
+    retriever_factory = None
+    if settings.rag_enabled:
+        config = retrieval_settings(settings)
+
+        def retriever_factory(session: AsyncSession) -> RetrievalService:
+            return RetrievalService(session, embedder, config)
+
+    return ChatService(factory, llm, settings.ollama_chat_model, retriever_factory)
 
 
 async def get_current_user(settings: SettingsDep, session: SessionDep) -> User:

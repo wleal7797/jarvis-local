@@ -5,7 +5,7 @@
 
 > 🚧 **Proyecto en construcción.** Se desarrolla por etapas y cada una queda documentada en `docs/`.
 
-**Estado:** 🟡 Etapa 4 terminada: chat web en vivo, en el navegador del PC o del celular
+**Estado:** 🟡 Etapa 5 terminada: responde con los documentos y cita sus fuentes (84 % de aciertos contra 6 % sin RAG)
 
 ## Inicio rápido
 
@@ -17,6 +17,7 @@ docker compose up -d                    # PostgreSQL + pgvector
 .\.venv\Scripts\alembic upgrade head
 ollama create jarvis:base -f ollama/Modelfile   # personalidad de JARVIS
 .\.venv\Scripts\python -m scripts.seed
+.\.venv\Scripts\python -m scripts.index_docs   # conocimiento inicial: la documentación
 .\.venv\Scripts\python -m app          # http://127.0.0.1:8000  (API en /docs)
 .\.venv\Scripts\python -m pytest
 ```
@@ -93,7 +94,7 @@ flowchart LR
 | 2 | PostgreSQL + pgvector | ✅ [bitácora](docs/etapas/02-postgres-pgvector.md) |
 | 3 | Ollama: modelo de lenguaje local | ✅ [bitácora](docs/etapas/03-ollama-chat.md) |
 | 4 | Vista web | ✅ [bitácora](docs/etapas/04-vista-web.md) |
-| 5 | Embeddings y RAG | ⚪ |
+| 5 | Embeddings y RAG | ✅ [bitácora](docs/etapas/05-embeddings-rag.md) |
 | 6 | Ingesta de conocimiento externo | ⚪ |
 | 7 | Voz a texto (faster-whisper) | ⚪ |
 | 8 | Texto a voz (Piper) | ⚪ |

@@ -27,6 +27,15 @@ class Settings(BaseSettings):
     ollama_chat_model: str = "jarvis:base"
     ollama_embed_model: str = "bge-m3"
     ollama_timeout_seconds: float = 120.0
+    # Los embeddings corren en la CPU para no quitarle VRAM al modelo de chat.
+    ollama_embed_on_gpu: bool = False
+
+    # RAG: búsqueda en documentos antes de responder (Etapa 5).
+    rag_enabled: bool = True
+    # 3 y no más: la GTX 1650 Ti lee el contexto a ~250 tokens/s (ver bitácora de la Etapa 5).
+    rag_top_k: int = 3
+    rag_min_similarity: float = 0.5
+    rag_min_similarity_with_keywords: float = 0.42
 
     # Usuario con el que se conversa hasta que exista el inicio de sesión (Etapa 10).
     default_username: str = "dueno"

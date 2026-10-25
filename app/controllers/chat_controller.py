@@ -60,7 +60,12 @@ async def list_messages(conversation_id: int, user: CurrentUserDep, session: Ses
     repo = ConversationRepository(session)
     if await repo.get_for_user(conversation_id, user.id) is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, NOT_FOUND)
-    return await repo.messages(conversation_id)
+    messages = await repo.messages(conversation_id)
+    sources = await repo.sources_for([m.id for m in messages])
+    return [
+        MessageOut.model_validate(m).model_copy(update={"sources": sources.get(m.id, [])})
+        for m in messages
+    ]
 
 
 @router.delete(
