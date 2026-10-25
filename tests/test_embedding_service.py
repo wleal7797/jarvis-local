@@ -34,6 +34,17 @@ async def test_pide_bge_m3_en_cpu_por_defecto():
     assert len(vectors) == 2 and len(vectors[0]) == EMBEDDING_DIM
     assert requests[0]["model"] == "bge-m3"
     assert requests[0]["options"] == {"num_gpu": 0}
+    assert "keep_alive" not in requests[0]
+
+
+async def test_limita_hilos_y_tiempo_cargado():
+    requests: list = []
+    http = httpx.AsyncClient(transport=httpx.MockTransport(ok_handler(requests)))
+    limited = OllamaEmbedder(http, "http://o", "bge-m3", threads=4, keep_alive="2m")
+    await limited.embed(["hola"])
+
+    assert requests[0]["options"] == {"num_gpu": 0, "num_thread": 4}
+    assert requests[0]["keep_alive"] == "2m"
 
 
 async def test_en_gpu_no_limita_capas():

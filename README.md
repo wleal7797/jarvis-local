@@ -24,6 +24,8 @@ ollama create jarvis:base -f ollama/Modelfile   # personalidad de JARVIS
 
 Requisitos previos: ver la [guía de instalación](docs/04-instalacion-paso-a-paso.md).
 
+Día a día: `.\scripts\jarvis.ps1 iniciar` · `detener` (libera RAM y GPU) · `estado`.
+
 ---
 
 <p align="center">

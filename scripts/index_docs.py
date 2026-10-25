@@ -45,6 +45,8 @@ async def main() -> None:
             settings.ollama_base_url,
             settings.ollama_embed_model,
             use_gpu=settings.ollama_embed_on_gpu,
+            threads=settings.ollama_embed_threads,
+            keep_alive=settings.ollama_embed_keep_alive,
         )
         async with factory() as session:
             service = KnowledgeService(session, embedder)

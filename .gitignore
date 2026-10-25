@@ -58,3 +58,4 @@ logs/
 
 # ---------- Herramientas locales ----------
 .claude/
+.jarvis-api.pid

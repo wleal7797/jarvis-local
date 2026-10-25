@@ -43,7 +43,7 @@ Valores aproximados medidos para la configuración elegida (modelo `qwen3:4b-ins
 - Un modelo de 8B (≈ 5 GB) **no cabe** completo: Ollama pasaría una parte a la CPU y respondería 3 a 5 veces más lento.
 - Por eso los embeddings, el reconocimiento de voz y la síntesis de voz corren en la **CPU**, así la GPU queda libre para el modelo de chat.
 
-### Longitud de contexto: 8192 tokens
+### Longitud de contexto: 6144 tokens
 
 El *contexto* es la **memoria de corto plazo** de JARVIS: cuánto de la conversación actual (más los documentos del RAG) puede "ver" a la vez. Cada token ocupa espacio en la VRAM (la *caché KV*).
 
@@ -52,23 +52,25 @@ Cálculo para `qwen3:4b` (36 capas, 8 cabezas KV de 128 dimensiones) con la cach
 | Contexto | Caché KV (q8_0) | Pesos del modelo | Total VRAM aprox. | ¿Cabe en 4 GB? |
 |---|---|---|---|---|
 | 4096 | 0,3 GB | 2,5 GB | ≈ 3,1 GB | ✅ Sobra |
-| **8192** | **0,6 GB** | 2,5 GB | **≈ 3,4 GB** | ✅ **Elegido** |
+| **6144** | **0,45 GB** | 2,5 GB | **≈ 3,1 GB** | ✅ **Elegido: cabe 100 % en la GPU** |
+| 8192 | 0,6 GB | 2,5 GB | ≈ 3,4 GB | ⚠️ Cabe al 88 %: el resto va al procesador |
 | 16384 | 1,2 GB | 2,5 GB | ≈ 4,0 GB | ❌ Se sale a la RAM y se vuelve lento |
 | 32768 | 2,4 GB | 2,5 GB | ≈ 5,2 GB | ❌ |
 
-8192 tokens equivalen a unas **6 000 palabras**. Se reparten así en cada pregunta:
+6144 tokens equivalen a unas **4 500 palabras**. Se reparten así en cada pregunta:
 
 | Parte del prompt | Tokens |
 |---|---|
-| Instrucciones de sistema (personalidad JARVIS) | ≈ 500 |
-| Recuerdos del usuario (memoria de largo plazo) | ≈ 300 |
-| Fragmentos del RAG (6 × 500) | ≈ 3 000 |
-| Historial reciente de la conversación | ≈ 2 400 |
-| Espacio para la respuesta | ≈ 2 000 |
+| Instrucciones de sistema (personalidad JARVIS) | ≈ 700 |
+| Fragmentos del RAG (3 × 500) | ≈ 1 800 |
+| Historial reciente de la conversación | ≈ 1 600 |
+| Espacio para la respuesta y los recuerdos (Etapa 11) | ≈ 2 000 |
+
+> **Historia de esta decisión:** al principio se eligió 8192. En la Etapa 5 se midió que esa GPU lee el contexto a ~250 tokens/s, así que 3 fragmentos bastan, y con 6144 el modelo cabe entero en la GPU: genera más rápido (42,8 contra 33–38 tokens/s), usa 734 MB de RAM y deja libre el procesador.
 
 **La memoria de largo plazo no depende del contexto.** Lo que JARVIS debe recordar para siempre se guarda en PostgreSQL (tabla `memories`, Etapa 11) y se trae al contexto sólo cuando es relevante. Cuando una conversación supera el espacio del historial, los mensajes antiguos se resumen.
 
-Se configura con la variable `OLLAMA_CONTEXT_LENGTH=8192`.
+Se configura con la variable `OLLAMA_CONTEXT_LENGTH=6144` y en `ollama/Modelfile` (`num_ctx`).
 
 ### Rendimiento medido en este equipo (2026‑10‑24)
 
@@ -77,17 +79,32 @@ Se configura con la variable `OLLAMA_CONTEXT_LENGTH=8192`.
 | `qwen3:4b` con el margen por defecto (1 GB) | 64 % | 9,5 tokens/s | 214 s (además "piensa" en inglés) |
 | `qwen3:4b-instruct`, margen 256 MB, contexto 8192 | 88 % | **40,6 tokens/s** | 6,9 s |
 | `qwen3:4b-instruct`, margen 256 MB, contexto 4096 | 100 % | 44,7 tokens/s | 6,0 s |
+| **`jarvis:base`, margen 256 MB, contexto 6144** (2026‑10‑25) | **100 %** | **42,8 tokens/s** | 11,1 s de carga, luego inmediato |
 
 \*Incluye cargar el modelo en memoria; las preguntas siguientes son más rápidas.
-Se eligió **8192**: el doble de memoria de conversación a cambio de sólo un 10 % de velocidad.
 Edge, Discord y otras apps con aceleración gráfica ocupan ≈ 0,8 GB de VRAM. Cerrarlas libera espacio para el modelo.
+
+### Encender y apagar JARVIS
+
+Cuando no lo uses, por ejemplo para jugar, libera RAM y GPU con un comando:
+
+```powershell
+.\scripts\jarvis.ps1 detener              # apaga la API, descarga los modelos y detiene la base (~1,2 GB + toda la GPU)
+.\scripts\jarvis.ps1 detener -TodoDocker  # además apaga Docker/WSL (~1 GB más; detiene también otros proyectos)
+.\scripts\jarvis.ps1 iniciar              # vuelve a encender todo
+.\scripts\jarvis.ps1 estado               # qué está corriendo y cuánta RAM queda
+```
+
+Medido el 2026‑10‑25: `detener` liberó **1,24 GB de RAM y los 3,1 GB de la GPU**.
+
+> **Dónde se va la RAM con todo encendido:** Docker Desktop suma ~1,1 GB (ventana 400 MB, servicio 150 MB, máquina virtual 550 MB) para una base que usa 50 MB; el modelo de chat ~0,7 GB; `bge-m3` 1,2 GB mientras está cargado. La app de Claude y el navegador también ocupan 1–2 GB. **La mejora más efectiva sigue siendo pasar a 16 GB de RAM.**
 
 ### Cómo ahorramos memoria (decisiones de diseño)
 
 1. **Un solo modelo de chat cargado a la vez** y descarga automática tras 5 min sin uso (`OLLAMA_KEEP_ALIVE=5m`).
 2. **Caché de contexto comprimida** en la GPU (`OLLAMA_KV_CACHE_TYPE=q8_0`, `OLLAMA_FLASH_ATTENTION=1`) y margen de VRAM reducido (`LLAMA_ARG_FIT_TARGET=256`).
-3. **Embeddings en CPU** (`num_gpu: 0` en la petición) para no pelear con el modelo de chat.
-4. **WSL2 limitado a 2 GB** con el archivo `.wslconfig` (ver [instalación](04-instalacion-paso-a-paso.md)).
+3. **Embeddings en CPU** (`num_gpu: 0` en la petición) para no pelear con el modelo de chat, **con 4 de los 8 hilos** (`OLLAMA_EMBED_THREADS=4`) y descargados a los **2 minutos** (`OLLAMA_EMBED_KEEP_ALIVE=2m`). Con 4 hilos son un 27 % más lentos, pero el procesador no pasa del ~70 % y el PC sigue usable.
+4. **WSL2 limitado a 2 GB** y con `autoMemoryReclaim=gradual`, que devuelve a Windows la memoria que Docker no usa (ver [instalación](04-instalacion-paso-a-paso.md)). PostgreSQL configurado para usar poco (`shared_buffers=128MB`, límite de 768 MB; en reposo usa ~20–50 MB).
 5. **Sin Redis ni Celery**: la cola de tareas vive en PostgreSQL (`ingestion_jobs` con `FOR UPDATE SKIP LOCKED`).
 6. **Vectores en media precisión** (`halfvec`): ocupan la mitad de disco y RAM que `vector`.
 7. **Indexación masiva de noche**: el modelo de chat se descarga y los embeddings usan la GPU.

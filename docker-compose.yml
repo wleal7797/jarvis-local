@@ -20,20 +20,20 @@ services:
     volumes:
       - jarvis_pgdata:/var/lib/postgresql/data
       - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
-    # Ajustes pensados para 8 GB de RAM en total.
+    # Ajustes pensados para 8 GB de RAM en total (la base usa ~50 MB en reposo).
     command:
       - postgres
       - -c
-      - shared_buffers=256MB
+      - shared_buffers=128MB
       - -c
       - work_mem=16MB
       - -c
       - maintenance_work_mem=256MB
       - -c
-      - effective_cache_size=768MB
+      - effective_cache_size=512MB
       - -c
-      - max_connections=30
-    mem_limit: 1g
+      - max_connections=20
+    mem_limit: 768m
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s

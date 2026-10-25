@@ -77,6 +77,8 @@ def get_embedder(settings: SettingsDep, http: HttpClientDep) -> Embedder:
         settings.ollama_base_url,
         settings.ollama_embed_model,
         use_gpu=settings.ollama_embed_on_gpu,
+        threads=settings.ollama_embed_threads,
+        keep_alive=settings.ollama_embed_keep_alive,
     )
 
 

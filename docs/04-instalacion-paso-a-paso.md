@@ -63,6 +63,11 @@ Crea el archivo `%USERPROFILE%\.wslconfig` con este contenido:
 memory=2GB
 processors=4
 swap=4GB
+
+[experimental]
+# Devuelve a Windows la memoria que WSL/Docker ya no usa.
+autoMemoryReclaim=gradual
+sparseVhd=true
 ```
 
 Luego aplica el cambio:
@@ -73,10 +78,10 @@ wsl --shutdown
 ```
 
 ### Paso 6 · Configurar Ollama para tu GPU de 4 GB
-Estas variables reducen el uso de VRAM y RAM. El porqué de los 8192 tokens de contexto está en [requisitos](01-requisitos-de-hardware.md#longitud-de-contexto-8192-tokens):
+Estas variables reducen el uso de VRAM y RAM. El porqué de los 6144 tokens de contexto está en [requisitos](01-requisitos-de-hardware.md#longitud-de-contexto-6144-tokens):
 
 ```powershell
-setx OLLAMA_CONTEXT_LENGTH "8192"
+setx OLLAMA_CONTEXT_LENGTH "6144"
 setx OLLAMA_KEEP_ALIVE "5m"
 setx OLLAMA_MAX_LOADED_MODELS "2"
 setx OLLAMA_NUM_PARALLEL "1"
