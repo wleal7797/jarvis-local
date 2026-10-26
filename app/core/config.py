@@ -45,6 +45,10 @@ class Settings(BaseSettings):
     # Respuestas habladas: tope de tokens (una o dos frases; evita monólogos lentos).
     voice_max_tokens: int = 200
 
+    # Memoria (Etapa 10): recordar lo que el usuario cuenta.
+    memory_enabled: bool = True
+    memory_token_budget: int = 500
+
     # Voz a texto (Etapa 7)
     stt_model: str = "small"
     # "auto": GPU si se puede (0,5 s por frase), si no CPU (~3 s). También "cuda" o "cpu".

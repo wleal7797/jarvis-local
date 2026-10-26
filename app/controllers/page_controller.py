@@ -39,6 +39,15 @@ async def knowledge_page(request: Request, settings: SettingsDep) -> HTMLRespons
     )
 
 
+@router.get("/memoria", response_class=HTMLResponse)
+async def memory_page(request: Request, settings: SettingsDep) -> HTMLResponse:
+    return templates.TemplateResponse(
+        request,
+        "memory.html",
+        {"app_name": settings.app_name, "app_version": settings.app_version},
+    )
+
+
 @router.get("/", response_class=HTMLResponse)
 async def chat_page(request: Request, settings: SettingsDep) -> HTMLResponse:
     return templates.TemplateResponse(

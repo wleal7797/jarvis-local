@@ -36,9 +36,41 @@ class FakeLLM:
             done=True, tokens_in=42, tokens_out=len(self.reply.split()), tokens_per_second=40.0
         )
 
+    async def complete(
+        self,
+        messages: list[ChatMessage],
+        *,
+        model: str | None = None,
+        options: dict[str, Any] | None = None,
+        json_schema: dict[str, Any] | None = None,
+    ) -> str:
+        self.calls.append(messages)
+        if self.fail:
+            raise LLMError("Ollama apagado")
+        return self.reply
+
     async def warm(self, keep_alive: str = "10m", prefill: bool = False) -> None:
         self.warmed = keep_alive
         self.prefilled = prefill
+
+
+class FakeMemory:
+    """Memoria que no recuerda nada (o lo que le digamos)."""
+
+    def __init__(self, facts: list[str] | None = None, learned=None) -> None:
+        self.facts = facts or []
+        self.learned = learned or []
+        self.learn_calls: list[tuple[int, int]] = []
+
+    async def facts_for_prompt(self, user_id: int) -> list[str]:
+        return self.facts
+
+    async def relevant(self, user_id: int, text: str) -> list[str]:
+        return self.facts[:3]
+
+    async def learn(self, user_id: int, reply_message_id: int):
+        self.learn_calls.append((user_id, reply_message_id))
+        return self.learned
 
 
 def _words(text: str) -> list[str]:

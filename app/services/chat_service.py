@@ -2,10 +2,14 @@
 
 Flujo de cada pregunta:
 1. Guarda el mensaje del usuario (crea la conversación si es nueva).
-2. Busca en los documentos los fragmentos que mejor responden la pregunta (RAG).
-3. Arma el prompt con el historial reciente y esos fragmentos numerados.
-4. Pide la respuesta al modelo y la va entregando pedazo a pedazo.
+2. Lee lo que recuerda del usuario (Etapa 10) y la fecha de hoy.
+3. Busca en los documentos los fragmentos que mejor responden la pregunta (RAG), salvo
+   que no haga falta: datos personales que se cuentan, charla corta por voz, o preguntas
+   por voz sobre la persona que ya sabe responder con lo que recuerda.
+4. Arma el prompt (recuerdos + historial + fragmentos numerados) y pide la respuesta al
+   modelo, que la va entregando pedazo a pedazo.
 5. Al terminar, guarda la respuesta, sus estadísticas y las fuentes consultadas.
+Después, el controlador revisa en segundo plano si hay algo nuevo que recordar.
 
 Usa su propia sesión de base de datos (no la de la petición) porque la respuesta
 sigue generándose después de que el controlador devolvió el `StreamingResponse`.
@@ -15,6 +19,7 @@ import logging
 import re
 import time
 from collections.abc import AsyncIterator, Callable, Sequence
+from datetime import datetime
 from typing import Any, Protocol
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -23,6 +28,7 @@ from app.models import Conversation, Message, MessageSource
 from app.repositories import ConversationRepository, ModelVersionRepository
 from app.services.embedding_service import EmbeddingError
 from app.services.llm import LLMError, LLMProvider
+from app.services.memory_service import is_personal_statement
 from app.services.prompt_builder import CONTEXT_TOKEN_BUDGET, build_messages, fit_context
 from app.services.retrieval_service import RetrievedChunk
 
@@ -48,6 +54,11 @@ class Retriever(Protocol):
 
 
 RetrieverFactory = Callable[[AsyncSession], Retriever]
+
+
+class MemorySource(Protocol):
+    async def facts_for_prompt(self, user_id: int) -> list[str]: ...
+    async def relevant(self, user_id: int, text: str) -> list[str]: ...
 
 
 class ConversationNotFoundError(LookupError):
@@ -84,6 +95,14 @@ def voice_needs_documents(text: str) -> bool:
     return not is_small_talk(text) and bool(_ASKS.search(text))
 
 
+# "¿Cómo se llama mi perro?", "¿Cuándo es mi cumpleaños?": preguntas sobre la persona.
+_ABOUT_USER = re.compile(r"\b(?:mi|mis|me|soy|estoy|tengo|vivo|trabajo|nac[ií])\b", re.IGNORECASE)
+
+
+def asks_about_user(text: str) -> bool:
+    return "?" in text and bool(_ABOUT_USER.search(text))
+
+
 def cited_numbers(answer: str, available: int) -> list[int]:
     """Números de fuente que el modelo citó de verdad (ignora los inventados)."""
     found = {int(n) for n in CITATION.findall(answer)}
@@ -113,6 +132,8 @@ class ChatService:
         retriever_factory: RetrieverFactory | None = None,
         voice_context_tokens: int = VOICE_CONTEXT_TOKENS,
         voice_max_tokens: int = VOICE_MAX_TOKENS,
+        memory: MemorySource | None = None,
+        clock: Callable[[], datetime] | None = None,
     ) -> None:
         self._session_factory = session_factory
         self._llm = llm
@@ -120,6 +141,8 @@ class ChatService:
         self._retriever_factory = retriever_factory
         self._voice_context_tokens = voice_context_tokens
         self._voice_max_tokens = voice_max_tokens
+        self._memory = memory
+        self._clock = clock or (lambda: datetime.now().astimezone())
 
     async def ensure_conversation(self, user_id: int, conversation_id: int) -> None:
         """Lanza `ConversationNotFoundError` si no existe o no es de ese usuario."""
@@ -152,12 +175,29 @@ class ChatService:
 
         yield {"type": "start", "conversation_id": conversation_id, "message_id": question.id}
 
-        # 2. Buscar en los documentos.
-        # Por voz: menos contexto, y nada de documentos para charla corta (responde antes).
+        # 2. Lo que JARVIS recuerda del usuario (Etapa 10). Si falla, responde sin ello.
+        facts: list[str] = []
+        known: list[str] = []  # los recuerdos más parecidos a esta pregunta
+        wants_documents = not is_personal_statement(text) and (
+            not voice or voice_needs_documents(text)
+        )
+        if self._memory is not None:
+            try:
+                facts = await self._memory.facts_for_prompt(user_id)
+                if wants_documents:
+                    known = await self._memory.relevant(user_id, text)
+            except Exception as exc:
+                logger.warning("no se pudieron leer los recuerdos", extra={"error": str(exc)})
+        # Por voz, "¿cómo se llama mi perro?" ya lo sabe: buscar documentos costaría ~10 s.
+        if voice and known and asks_about_user(text):
+            wants_documents = False
+
+        # 3. Buscar en los documentos.
+        # "Me gusta el café sin azúcar" se recuerda, no se busca. Por voz, tampoco la charla
+        # corta ni lo que no es pregunta (responde antes).
         retrieval_started = time.perf_counter()
-        if voice and not voice_needs_documents(text):
-            context = []
-        else:
+        context: list[RetrievedChunk] = []
+        if wants_documents:
             if self._retriever_factory is not None:
                 # Buscar y leer documentos tarda: se avisa para mostrarlo (y decirlo por voz).
                 yield {"type": "searching"}
@@ -168,12 +208,20 @@ class ChatService:
         if context:
             yield {"type": "sources", "sources": source_payload(context)}
 
-        # 3 y 4. Generar la respuesta en streaming.
+        # 4. Generar la respuesta en streaming.
         parts: list[str] = []
         stats = None
         try:
             async for chunk in self._llm.chat_stream(
-                build_messages(history, text, context, spoken=voice),
+                build_messages(
+                    history,
+                    text,
+                    context,
+                    spoken=voice,
+                    memories=facts,
+                    known=known,
+                    now=self._clock(),
+                ),
                 model=self._model,
                 options={"num_predict": self._voice_max_tokens} if voice else None,
             ):

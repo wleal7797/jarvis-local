@@ -201,7 +201,9 @@
     state.reply.el.bubble.innerHTML = window.JarvisMarkdown.render(state.reply.text.trim());
     state.reply.el.meta.textContent = formatMeta(end);
     addListenButton(state.reply.el, state.reply.text.trim());
+    if (window.JarvisFeedback) window.JarvisFeedback.attach(state.reply.el, end.message_id, null);
     renderSources(state.reply.el.wrap, state.reply.sources, state.reply.text);
+    state.lastReply = state.reply.el; // aquí llega la nota "Lo recordaré" si aprende algo
     state.reply = null;
     setBusy(false);
     loadConversations();
@@ -273,6 +275,8 @@
         appendToken(data.content);
       } else if (data.type === "end") {
         finishReply(data);
+      } else if (data.type === "memory") {
+        if (window.JarvisFeedback) window.JarvisFeedback.noteMemory(state.lastReply, data);
       } else if (data.type === "error") {
         failReply(data.message || "Algo salió mal.");
       }
@@ -380,6 +384,7 @@
         const added = addMessage(m.role === "user" ? "user" : "assistant", m.content, meta);
         if (m.role === "assistant") {
           addListenButton(added, m.content);
+          if (window.JarvisFeedback) window.JarvisFeedback.attach(added, m.id, m.rating);
           renderSources(added.wrap, m.sources, m.content);
         }
       });

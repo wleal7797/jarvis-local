@@ -46,6 +46,18 @@ class LLMProvider(Protocol):
         """Genera la respuesta pedazo a pedazo (streaming)."""
         ...
 
+    async def complete(
+        self,
+        messages: list[ChatMessage],
+        *,
+        model: str | None = None,
+        options: dict[str, Any] | None = None,
+        json_schema: dict[str, Any] | None = None,
+    ) -> str:
+        """Respuesta completa de una vez. Con `json_schema`, el modelo sólo puede
+        responder un JSON con esa forma (útil para tareas internas)."""
+        ...
+
     async def warm(self, keep_alive: str = "10m", prefill: bool = False) -> None:
         """Deja el modelo cargado y listo para responder sin esperar."""
         ...

@@ -20,6 +20,14 @@ class ConversationRepository(BaseRepository[Conversation]):
             )
         )
 
+    async def message_for_user(self, message_id: int, user_id: int) -> Message | None:
+        """Un mensaje, sólo si su conversación es de ese usuario."""
+        return await self.session.scalar(
+            select(Message)
+            .join(Conversation)
+            .where(Message.id == message_id, Conversation.user_id == user_id)
+        )
+
     async def list_for_user(self, user_id: int, limit: int = 50) -> Sequence[Conversation]:
         stmt = (
             select(Conversation)

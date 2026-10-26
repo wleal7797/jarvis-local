@@ -306,6 +306,34 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
 @media (prefers-reduced-motion: reduce) {
   .agent__dots span, .agent__icon { animation: none !important; }
 }
+/* Calificar respuestas y memoria */
+.rate { display: inline-flex; gap: 2px; vertical-align: middle; }
+.rate-btn {
+  display: inline-grid; place-items: center; width: 26px; height: 26px; padding: 0;
+  border: 0; border-radius: 8px; background: transparent; color: var(--muted); cursor: pointer;
+}
+.rate-btn svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.rate-btn:hover { background: var(--surface-2); color: var(--accent-strong); }
+.rate-btn[aria-pressed="true"] { color: var(--accent-strong); background: var(--accent-soft); }
+.rate-btn[aria-pressed="true"] svg { fill: currentColor; fill-opacity: 0.15; }
+.correction {
+  display: grid; gap: 8px; margin-top: 8px; padding: 12px; max-width: 640px;
+  border: 1px solid var(--border); border-radius: 12px; background: var(--surface);
+}
+.correction__label { display: grid; gap: 6px; font-size: 13px; font-weight: 600; }
+.correction__label span { font-weight: 400; color: var(--muted); }
+.correction textarea {
+  width: 100%; resize: vertical; padding: 8px 10px; font: inherit; font-size: 14px;
+  color: var(--text); background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px;
+}
+.correction__actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+.correction__msg { margin: 0; font-size: 13px; color: var(--muted); }
+.correction__msg:empty { display: none; }
+.msg__memory {
+  display: flex; align-items: center; gap: 6px; margin: 6px 0 0; font-size: 13px; color: var(--muted);
+}
+.msg__memory svg { width: 15px; height: 15px; flex: none; fill: none; stroke: var(--accent); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.msg__memory a { color: var(--accent-strong); }
 .listen-btn { background: none; border: 0; padding: 0; color: var(--accent-strong); font: inherit; font-size: 12px; cursor: pointer; }
 .listen-btn:hover { text-decoration: underline; }
 .listen-btn:disabled { opacity: 0.6; cursor: wait; }
@@ -475,3 +503,32 @@ button.nav-link { width: 100%; background: none; border: 0; text-align: left; cu
 .range-labels { display: flex; justify-content: space-between; font-size: 12px; font-weight: 400; color: var(--muted); }
 .dialog__body .hint code { font-size: 12px; }
 .dialog__actions { display: flex; justify-content: flex-end; gap: 8px; }
+
+/* Panel "Memoria" */
+.memory-add { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; margin-bottom: 10px; }
+.field select, .memory__edit select {
+  padding: 9px 10px; font: inherit; font-size: 14px; color: var(--text);
+  background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px;
+}
+.memories { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.memory {
+  display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: center;
+  padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface);
+}
+.memory__text { margin: 0; font-size: 15px; grid-column: 1; }
+.memory__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; grid-column: 1; font-size: 12px; color: var(--muted); }
+.memory__actions { display: flex; gap: 6px; grid-column: 2; grid-row: 1 / span 2; }
+.memory__level { padding: 1px 8px; border-radius: 999px; font-weight: 600; background: var(--surface-2); }
+.memory__level--5 { background: var(--accent-soft); color: var(--accent-strong); }
+.memory__edit { display: flex; flex-wrap: wrap; gap: 8px; grid-column: 1 / -1; }
+.memory__edit input {
+  flex: 1 1 260px; min-width: 0; padding: 9px 10px; font: inherit; font-size: 14px; color: var(--text);
+  background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px;
+}
+.btn--danger { color: var(--danger); }
+.btn--danger:hover { border-color: var(--danger); }
+.how { margin: 0; padding-left: 18px; display: grid; gap: 6px; font-size: 14px; color: var(--muted); }
+@media (max-width: 560px) {
+  .memory { grid-template-columns: 1fr; }
+  .memory__actions { grid-column: 1; grid-row: auto; }
+}
