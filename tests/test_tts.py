@@ -282,3 +282,35 @@ def test_no_acepta_voces_no_instaladas_ni_velocidades_raras(tmp_path):
         tts.configure(voice="es_XX-nadie-low")
     with pytest.raises(SpeechError, match="velocidad"):
         tts.configure(length_scale=5)
+
+
+def test_efecto_pelicula_cambia_el_sonido_sin_cambiar_la_duracion():
+    import numpy as np
+
+    from app.services.tts_service import apply_effect
+
+    rate = 22050
+    tone_ = (np.sin(np.arange(rate) * 2 * np.pi * 220 / rate) * 8000).astype(np.int16)
+    buffer = io.BytesIO()
+    with wave.open(buffer, "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(rate)
+        w.writeframes(tone_.tobytes())
+    original = buffer.getvalue()
+
+    assert apply_effect(original, "ninguno") == original
+    processed = apply_effect(original, "pelicula")
+    assert processed != original
+    with wave.open(io.BytesIO(processed)) as w:
+        assert w.getnframes() == rate and w.getframerate() == rate
+
+
+def test_no_acepta_efectos_desconocidos(tmp_path):
+    from app.services.tts_service import PiperSettings, PiperTTS, SpeechError
+
+    tts = PiperTTS(PiperSettings(voices_dir=str(tmp_path)))
+    tts.configure(effect="pelicula")
+    assert tts.effect == "pelicula"
+    with pytest.raises(SpeechError):
+        tts.configure(effect="robot")

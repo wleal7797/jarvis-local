@@ -94,7 +94,10 @@ async def speak(body: SpeakIn, user: CurrentUserDep, tts: TextToSpeechDep) -> Re
 
 def _settings_out(tts) -> VoiceSettingsOut:
     return VoiceSettingsOut(
-        voice=tts.voice_name, length_scale=tts.length_scale, installed=tts.installed_voices()
+        voice=tts.voice_name,
+        length_scale=tts.length_scale,
+        effect=tts.effect,
+        installed=tts.installed_voices(),
     )
 
 
@@ -110,10 +113,16 @@ async def get_voice_settings(user: CurrentUserDep, tts: TextToSpeechDep):
 )
 async def update_voice_settings(body: VoiceSettingsIn, user: CurrentUserDep, tts: TextToSpeechDep):
     try:
-        tts.configure(voice=body.voice, length_scale=body.length_scale)
+        tts.configure(voice=body.voice, length_scale=body.length_scale, effect=body.effect)
     except SpeechError as exc:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from None
-    save_preferences({"tts_voice": tts.voice_name, "tts_length_scale": tts.length_scale})
+    save_preferences(
+        {
+            "tts_voice": tts.voice_name,
+            "tts_length_scale": tts.length_scale,
+            "tts_effect": tts.effect,
+        }
+    )
     return _settings_out(tts)
 
 

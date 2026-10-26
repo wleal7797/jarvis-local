@@ -60,6 +60,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             voice=preferences.get("tts_voice", settings.tts_voice),
             length_scale=preferences.get("tts_length_scale", settings.tts_length_scale),
             idle_unload_seconds=settings.tts_idle_unload_seconds,
+            effect=preferences.get("tts_effect", "ninguno"),
         )
     )
     app.state.voice_status = VoiceStatusHub()

@@ -48,7 +48,9 @@ async def test_endpoint_de_ajustes_de_voz(tmp_path, monkeypatch):
         )
         assert changed.status_code == 200
         assert changed.json()["voice"] == "es_MX-claude-high"
-        assert saved == [{"tts_voice": "es_MX-claude-high", "tts_length_scale": 1.15}]
+        assert saved == [
+            {"tts_voice": "es_MX-claude-high", "tts_length_scale": 1.15, "tts_effect": "ninguno"}
+        ]
 
         missing = await client.put("/api/voice/settings", json={"voice": "no-existe"})
         assert missing.status_code == 422

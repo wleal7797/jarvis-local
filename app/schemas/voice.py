@@ -13,6 +13,7 @@ class VoiceInfo(BaseModel):
 class VoiceSettingsOut(BaseModel):
     voice: str
     length_scale: float
+    effect: str = "ninguno"
     installed: list[VoiceInfo]
 
 
@@ -20,6 +21,9 @@ class VoiceSettingsIn(BaseModel):
     voice: str | None = Field(default=None, examples=["es_ES-davefx-medium"])
     length_scale: float | None = Field(
         default=None, ge=0.5, le=2.0, description="1.0 normal · >1 más despacio · <1 más rápido"
+    )
+    effect: str | None = Field(
+        default=None, description='"ninguno" o "pelicula" (sonido de asistente de película)'
     )
 
 

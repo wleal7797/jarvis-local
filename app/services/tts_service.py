@@ -100,6 +100,50 @@ class SentenceSplitter:
         return [rest] if rest else []
 
 
+# ---------- Efecto "película" ----------
+
+EFFECTS = ("ninguno", "pelicula")
+
+
+def apply_effect(wav: bytes, effect: str) -> bytes:
+    """Le da a la voz el sonido de asistente de película, sin imitar a ningún actor.
+
+    - Quita graves (filtro paso alto ~150 Hz): voz más limpia, "de altavoz".
+    - Dos copias muy cercanas (7 y 13 ms): un brillo metálico suave, de máquina.
+    - Dos ecos cortos (40 y 65 ms): como si hablara en una sala amplia.
+    """
+    if effect != "pelicula":
+        return wav
+    import numpy as np
+
+    with wave.open(io.BytesIO(wav)) as source:
+        rate = source.getframerate()
+        audio = np.frombuffer(source.readframes(source.getnframes()), np.int16).astype(np.float32)
+    if audio.size == 0:
+        return wav
+    alpha = 1.0 / (1.0 + 2 * np.pi * 150 / rate)  # paso alto de un polo
+    high = np.empty_like(audio)
+    high[0] = audio[0]
+    previous_in, previous_out = audio[0], audio[0]
+    for i in range(1, audio.size):  # ~0,1 s por frase: barato al lado de Piper
+        previous_out = alpha * (previous_out + audio[i] - previous_in)
+        previous_in = audio[i]
+        high[i] = previous_out
+    mixed = high.copy()
+    for delay_ms, gain in ((7, 0.35), (13, 0.25), (40, 0.18), (65, 0.10)):
+        shift = int(rate * delay_ms / 1000)
+        mixed[shift:] += gain * high[:-shift]
+    peak = float(np.max(np.abs(mixed))) or 1.0
+    mixed *= min(1.0, 30000.0 / peak)
+    out = io.BytesIO()
+    with wave.open(out, "wb") as target:
+        target.setnchannels(1)
+        target.setsampwidth(2)
+        target.setframerate(rate)
+        target.writeframes(mixed.astype(np.int16).tobytes())
+    return out.getvalue()
+
+
 # ---------- Piper ----------
 
 
@@ -110,6 +154,7 @@ class PiperSettings:
     # >1 habla más despacio, <1 más rápido.
     length_scale: float = 1.0
     idle_unload_seconds: int = 600
+    effect: str = "ninguno"  # o "pelicula"
 
 
 def _default_loader(cfg: PiperSettings) -> Any:
@@ -144,6 +189,10 @@ class PiperTTS:
         return self._cfg.length_scale
 
     @property
+    def effect(self) -> str:
+        return self._cfg.effect
+
+    @property
     def loaded(self) -> bool:
         return self._voice is not None
 
@@ -163,8 +212,15 @@ class PiperTTS:
             )
         return voices
 
-    def configure(self, voice: str | None = None, length_scale: float | None = None) -> None:
-        """Cambia la voz o la velocidad en caliente (la próxima frase ya usa la nueva)."""
+    def configure(
+        self,
+        voice: str | None = None,
+        length_scale: float | None = None,
+        effect: str | None = None,
+    ) -> None:
+        """Cambia la voz, la velocidad o el efecto en caliente (la próxima frase ya los usa)."""
+        if effect is not None and effect not in EFFECTS:
+            raise SpeechError(f"Efecto desconocido: {effect}")
         if voice is not None and voice not in {v["name"] for v in self.installed_voices()}:
             raise SpeechError(f"La voz {voice} no está descargada")
         if length_scale is not None and not 0.5 <= length_scale <= 2.0:
@@ -178,6 +234,7 @@ class PiperTTS:
                 voice=new_voice,
                 length_scale=length_scale if length_scale is not None else self._cfg.length_scale,
                 idle_unload_seconds=self._cfg.idle_unload_seconds,
+                effect=effect if effect is not None else self._cfg.effect,
             )
         logger.info(
             "voz configurada", extra={"voice": new_voice, "length_scale": self._cfg.length_scale}
@@ -206,7 +263,7 @@ class PiperTTS:
                 raise SpeechError(f"No se pudo generar la voz: {exc}") from exc
             finally:
                 self._last_used = time.monotonic()
-            data = buffer.getvalue()
+            data = apply_effect(buffer.getvalue(), self._cfg.effect)
             with wave.open(io.BytesIO(data)) as wav_file:
                 seconds = wav_file.getnframes() / wav_file.getframerate()
             return SpeechAudio(
