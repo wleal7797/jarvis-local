@@ -3,13 +3,12 @@
 import base64
 import io
 import wave
-from types import SimpleNamespace
 
 import httpx
 import pytest
 from fastapi.testclient import TestClient
 
-from app.core.dependencies import get_chat_service, get_current_user, get_memory_service, get_tts
+from app.core.dependencies import get_chat_service, get_memory_service, get_tts
 from app.main import create_app
 from app.services.speech_pipeline import stream_with_voice
 from app.services.tts_service import (
@@ -20,7 +19,7 @@ from app.services.tts_service import (
     SpeechError,
     clean_for_speech,
 )
-from tests.fakes import FakeMemory
+from tests.fakes import FakeMemory, as_owner
 
 pytestmark = pytest.mark.anyio
 
@@ -201,7 +200,7 @@ class StubChat:
 
 def ws_client(tts: StubTTS) -> TestClient:
     app = create_app()
-    app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(id=1)
+    as_owner(app)
     app.dependency_overrides[get_chat_service] = lambda: StubChat()
     app.dependency_overrides[get_memory_service] = lambda: FakeMemory()
     app.dependency_overrides[get_tts] = lambda: tts
@@ -234,7 +233,7 @@ def test_websocket_sin_voz_no_genera_audio():
 
 async def test_endpoint_speak_devuelve_wav():
     app = create_app()
-    app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(id=1)
+    as_owner(app)
     app.dependency_overrides[get_tts] = lambda: StubTTS()
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:

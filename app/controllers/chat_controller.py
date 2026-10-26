@@ -72,12 +72,12 @@ def learn_later(
 
 
 async def _ndjson(
-    events: AsyncIterator[ChatEvent], memory: MemoryService | None, user_id: int
+    events: AsyncIterator[ChatEvent], memory: MemoryService | None, user_id: int, user_role: str
 ) -> AsyncIterator[str]:
     seen: dict = {}
     async for event in _tap_end(events, seen):
         yield json.dumps(event, ensure_ascii=False) + "\n"
-    if memory is not None and "message_id" in seen:
+    if memory is not None and "message_id" in seen and user_role != "guest":
         for learned in await memory.learn(user_id, seen["message_id"]):
             yield json.dumps(memory_event(learned), ensure_ascii=False) + "\n"
 
@@ -101,7 +101,9 @@ async def chat(
             raise HTTPException(status.HTTP_404_NOT_FOUND, NOT_FOUND) from None
 
     events = service.answer(user.id, body.message, body.conversation_id)
-    return StreamingResponse(_ndjson(events, memory, user.id), media_type="application/x-ndjson")
+    return StreamingResponse(
+        _ndjson(events, memory, user.id, user.role), media_type="application/x-ndjson"
+    )
 
 
 @router.get("/conversations", response_model=list[ConversationOut], summary="Mis conversaciones")
@@ -190,7 +192,8 @@ async def chat_ws(
             else:
                 async for event in events:
                     await send(event)
-            if "message_id" in seen:
+            # De los invitados no se aprende nada (son visitas, no la familia).
+            if "message_id" in seen and user.role != "guest":
                 learn_later(memory, user.id, seen["message_id"], send)
     except WebSocketDisconnect:
         logger.info("WebSocket cerrado por el navegador")

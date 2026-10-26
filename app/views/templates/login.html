@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Entrar · {{ app_name }}{% endblock %}
+
+{% block body %}
+<main class="login">
+  <div class="login__card">
+    <div class="login__brand">
+      <img src="/static/img/jarvis.svg" alt="" width="40" height="40">
+      <h1>{{ app_name }}</h1>
+    </div>
+
+    <form class="login__form" id="login-form" hidden>
+      <p class="login__lead">Inicie sesión para hablar con JARVIS.</p>
+      <label class="field">Usuario
+        <input type="text" id="username" autocomplete="username" autocapitalize="none" spellcheck="false" required>
+      </label>
+      <label class="field">Contraseña
+        <input type="password" id="password" autocomplete="current-password" required>
+      </label>
+      <button class="btn btn--primary btn--block" type="submit">Entrar</button>
+    </form>
+
+    <form class="login__form" id="setup-form" hidden>
+      <p class="login__lead">Bienvenido. Es la primera vez: elija la contraseña del <strong>dueño</strong> (usuario <code>dueno</code>).</p>
+      <label class="field">Contraseña nueva
+        <input type="password" id="setup-password" autocomplete="new-password" minlength="8" required>
+      </label>
+      <label class="field">Repítala
+        <input type="password" id="setup-repeat" autocomplete="new-password" minlength="8" required>
+      </label>
+      <p class="hint">Al menos 8 caracteres. Se guarda cifrada con Argon2: ni JARVIS puede leerla.</p>
+      <button class="btn btn--primary btn--block" type="submit">Guardar y entrar</button>
+    </form>
+
+    <p class="form-message" id="login-message" role="status" aria-live="polite"></p>
+    <p class="login__privacy">100 % local · nada sale de esta casa</p>
+  </div>
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/login.js?v={{ v }}"></script>
+{% endblock %}

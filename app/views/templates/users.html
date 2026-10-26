@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Usuarios · {{ app_name }}{% endblock %}
+
+{% block body %}
+<div class="page">
+  <header class="page__header">
+    <a class="icon-btn" href="/" aria-label="Volver al chat">
+      <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>
+    </a>
+    <div class="page__heading">
+      <h1>Usuarios</h1>
+      <p>Quién puede entrar a JARVIS desde los dispositivos de la casa.</p>
+    </div>
+    <button class="icon-btn" id="toggle-theme" type="button" aria-label="Cambiar tema claro u oscuro">
+      <svg class="icon-sun" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      <svg class="icon-moon" aria-hidden="true" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+    </button>
+  </header>
+
+  <main class="page__body">
+    <section class="card" aria-labelledby="new-user-title">
+      <h2 id="new-user-title">Agregar a alguien</h2>
+      <form class="user-form" id="user-form">
+        <label class="field">Nombre
+          <input type="text" id="new-name" maxlength="64" placeholder="Laura" required>
+        </label>
+        <label class="field">Usuario
+          <input type="text" id="new-username" maxlength="32" pattern="[A-Za-z0-9._]+" autocapitalize="none" spellcheck="false" placeholder="laura" required>
+        </label>
+        <label class="field">Contraseña
+          <input type="password" id="new-password" minlength="8" autocomplete="new-password" required>
+        </label>
+        <label class="field field--small">Rol
+          <select id="new-role">
+            <option value="member" selected>Familia</option>
+            <option value="guest">Invitado</option>
+            <option value="owner">Dueño</option>
+          </select>
+        </label>
+        <button class="btn btn--primary" type="submit">Agregar</button>
+      </form>
+      <p class="form-message" id="users-message" role="status" aria-live="polite"></p>
+    </section>
+
+    <section class="card" aria-labelledby="users-title">
+      <h2 id="users-title">Quién puede entrar</h2>
+      <ul class="users" id="users"></ul>
+    </section>
+
+    <section class="card" aria-labelledby="roles-title">
+      <h2 id="roles-title">Qué puede hacer cada rol</h2>
+      <ul class="how">
+        <li><strong>Dueño:</strong> todo, incluido agregar usuarios.</li>
+        <li><strong>Familia:</strong> conversar, su propia memoria, subir documentos (los personales sólo los ve quien los sube) y calificar respuestas.</li>
+        <li><strong>Invitado:</strong> sólo conversar. No ve documentos ni recuerdos, y JARVIS no aprende nada de lo que dice.</li>
+      </ul>
+    </section>
+  </main>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>window.JARVIS_ME = {{ user.id }};</script>
+<script src="/static/js/theme.js?v={{ v }}"></script>
+<script src="/static/js/users.js?v={{ v }}"></script>
+{% endblock %}

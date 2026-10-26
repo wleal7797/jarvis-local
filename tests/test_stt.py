@@ -5,7 +5,7 @@ from types import SimpleNamespace
 import httpx
 import pytest
 
-from app.core.dependencies import get_current_user, get_stt
+from app.core.dependencies import get_stt
 from app.main import create_app
 from app.services.stt_service import (
     FasterWhisperSTT,
@@ -13,6 +13,7 @@ from app.services.stt_service import (
     TranscriptionError,
     WhisperSettings,
 )
+from tests.fakes import as_owner
 
 pytestmark = pytest.mark.anyio
 
@@ -123,7 +124,7 @@ class StubSTT:
 def client_with(stt: StubSTT) -> httpx.AsyncClient:
     app = create_app()
     app.dependency_overrides[get_stt] = lambda: stt
-    app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(id=1)
+    as_owner(app)
     return httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test")
 
 

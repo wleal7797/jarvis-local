@@ -1,14 +1,12 @@
 """Pruebas de la vista web y del WebSocket de chat (sin base de datos ni GPU)."""
 
-from types import SimpleNamespace
-
 import pytest
 from fastapi.testclient import TestClient
 
-from app.core.dependencies import get_chat_service, get_current_user, get_memory_service, get_tts
+from app.core.dependencies import get_chat_service, get_memory_service, get_tts
 from app.main import create_app
 from app.services.chat_service import ConversationNotFoundError
-from tests.fakes import FakeMemory
+from tests.fakes import FakeMemory, as_owner
 
 
 class StubChatService:
@@ -37,7 +35,7 @@ def stub() -> StubChatService:
 @pytest.fixture
 def client(stub: StubChatService) -> TestClient:
     app = create_app()
-    app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(id=1)
+    as_owner(app)
     app.dependency_overrides[get_chat_service] = lambda: stub
     app.dependency_overrides[get_memory_service] = lambda: FakeMemory()
     app.dependency_overrides[get_tts] = lambda: None  # estas pruebas no piden voz

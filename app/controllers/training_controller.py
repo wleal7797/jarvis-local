@@ -4,9 +4,14 @@
 - `/api/messages/{id}/feedback`: calificar una respuesta y, con 👎, escribir la correcta.
 """
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.core.dependencies import CurrentUserDep, MemoryServiceDep, TrainingServiceDep
+from app.core.dependencies import (
+    CurrentUserDep,
+    MemoryServiceDep,
+    TrainingServiceDep,
+    require_member,
+)
 from app.schemas.memory import (
     FeedbackIn,
     FeedbackOut,
@@ -19,7 +24,10 @@ from app.services.embedding_service import EmbeddingError
 from app.services.memory_service import MemoryNotFoundError
 from app.services.training_service import MessageNotRatableError
 
-router = APIRouter(prefix="/api", tags=["memoria y entrenamiento"])
+# Los invitados no tienen memoria ni califican respuestas.
+router = APIRouter(
+    prefix="/api", tags=["memoria y entrenamiento"], dependencies=[Depends(require_member)]
+)
 
 NOT_FOUND = "Recuerdo no encontrado"
 NO_EMBEDDINGS = "No se pudo calcular el significado del texto: ¿está encendido Ollama?"

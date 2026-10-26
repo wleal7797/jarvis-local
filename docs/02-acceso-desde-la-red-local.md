@@ -2,68 +2,103 @@
 
 Pregunta: **si entro a `localhost` desde cualquier dispositivo de mi casa, ¿entro a la app?**
 
-**No.** `localhost` siempre significa "este mismo aparato". Si escribes `localhost` en tu celular, el celular se busca a sí mismo, no al PC.
-Los demás dispositivos deben usar la **dirección del PC dentro de tu red** (por ejemplo `192.168.1.50`).
+**No.** `localhost` siempre significa "este mismo aparato". Si escribe `localhost` en su celular, el celular se busca a sí mismo, no al PC.
+Los demás dispositivos usan la **dirección del PC dentro de su red** (por ejemplo `192.168.1.50`).
 
 ```
               Router de la casa (192.168.1.1)
         ┌─────────────┼──────────────┬──────────────┐
    PC servidor     Celular        Tablet         Otro PC
   192.168.1.50   192.168.1.71   192.168.1.80   192.168.1.92
-  JARVIS :443
         ▲              │              │              │
-        └──── https://192.168.1.50  (o https://jarvis.local) ─┘
+        └────────── https://192.168.1.50 ────────────┘
+
+   En el PC:  Caddy (:443, HTTPS)  ──►  API de JARVIS (127.0.0.1:8000, sólo este PC)
 ```
 
-Todo el tráfico se queda **dentro de tu casa**. Nada pasa por internet.
+Todo el tráfico se queda **dentro de su casa**. Nada pasa por internet.
 
 ---
 
-## Lo que haremos (Etapa 11)
+## Cómo quedó (Etapa 11)
 
-### 1. Escuchar en la red y no sólo en el PC
-La API arranca con `--host 0.0.0.0` en lugar de `127.0.0.1`. Así acepta conexiones de otros dispositivos.
+| Pieza | Qué hace |
+|---|---|
+| **API en `127.0.0.1:8000`** | No se abre a la red: sólo la ve este PC. |
+| **Caddy** (`deploy/caddy/Caddyfile`) | Recibe en `https://<ip-del-pc>` y le pasa todo a la API. Crea su propia autoridad certificadora local: los certificados nunca se piden a internet. |
+| **Firewall de Windows** | Puertos 80 y 443 abiertos **sólo en redes privadas** (su Wi‑Fi de casa), no en cafés ni aeropuertos. |
+| **Inicio de sesión** | Usuarios con contraseña (Argon2) y roles. Sin sesión no se ve nada. |
 
-### 2. IP fija para el PC
-En el panel de tu router (normalmente `192.168.1.1` o `192.168.0.1`) se crea una **reserva DHCP** para el PC. Así su IP no cambia y los demás dispositivos siempre lo encuentran.
+¿Por qué HTTPS? Los navegadores **sólo permiten el micrófono** en `localhost` o en sitios **HTTPS**. Con `http://192.168.1.50` el celular no podría escucharle.
 
-### 3. Abrir el puerto sólo para la red privada
-Regla del Firewall de Windows (PowerShell como administrador):
+---
+
+## Paso a paso
+
+### 1. Preparar el PC (una sola vez, como administrador)
 
 ```powershell
-New-NetFirewallRule -DisplayName "JARVIS HTTPS (LAN)" -Direction Inbound -Protocol TCP -LocalPort 443 -Profile Private -Action Allow
+# Clic derecho en PowerShell > "Ejecutar como administrador"
+cd "$env:USERPROFILE\OneDrive\Desktop\JARVIS v1.0"
+powershell -ExecutionPolicy Bypass -File .\scripts\red_local.ps1
 ```
 
-`-Profile Private` hace que la regla funcione en tu Wi‑Fi de casa (marcada como "Red privada") y no en redes públicas como un café.
+Pregunta antes de cada paso: instala **Caddy** (winget), marca su Wi‑Fi como **red privada**, abre los puertos **80 y 443 sólo en redes privadas** y, si quiere, confía en el certificado en este PC. Para deshacerlo: `.\scripts\red_local.ps1 -Quitar`.
 
-### 4. HTTPS, obligatorio para usar el micrófono
-Los navegadores **sólo permiten usar el micrófono** en `localhost` o en sitios con **HTTPS**.
-Desde el celular, `http://192.168.1.50` **no podría escucharte**. Por eso:
+> Estos pasos cambian la configuración de seguridad de Windows: por eso los ejecuta usted y no JARVIS.
 
-- Ponemos **Caddy** delante de la API como *proxy inverso*. Caddy crea su propia autoridad certificadora local y sirve la app por HTTPS.
-- Instalas el **certificado raíz de Caddy** una sola vez en cada dispositivo (celular, tablet) para que confíe en él.
+### 2. Encender JARVIS
 
-### 5. Nombre fácil (opcional)
-Windows anuncia su nombre en la red con mDNS. Si tu PC se llama `JARVIS-SERVER`, la app queda en `https://jarvis-server.local`. Si algún dispositivo no lo resuelve, se usa la IP.
+```powershell
+.\scripts\jarvis.ps1 iniciar
+```
 
-### 6. Inicio de sesión
-Como cualquier persona conectada a tu Wi‑Fi podría abrir la app, la app tendrá **usuarios con contraseña**:
+Si Caddy está instalado, al final dice: `Desde el celular (misma Wi-Fi): https://192.168.1.50`.
+
+### 3. La primera vez: la contraseña del dueño
+Abra `http://localhost:8000` en el PC. JARVIS pide elegir la contraseña del **dueño** (usuario `dueno`). Después, en **Usuarios** (menú lateral) puede agregar a la familia y a las visitas.
 
 | Rol | Puede |
 |---|---|
-| `owner` (tú) | Todo: conocimiento, entrenamiento, modelos, usuarios |
-| `member` (familia) | Conversar y ver su propio historial |
-| `guest` | Conversar sin acceso a datos personales |
+| **Dueño** | Todo, incluido agregar usuarios |
+| **Familia** | Conversar, su propia memoria, subir documentos (los personales sólo los ve quien los sube), calificar respuestas |
+| **Invitado** | Sólo conversar. No ve documentos ni recuerdos, y JARVIS no aprende nada de lo que dice |
 
-Las contraseñas se guardan con **Argon2** (hash irreversible) y la sesión viaja en una cookie segura (`HttpOnly`, `Secure`).
-Los documentos personales se marcan como `is_personal` y **sólo los ve su dueño**.
+### 4. Instalar el certificado en el celular (una vez por aparato)
+
+Con el celular en la **misma Wi‑Fi**, abra **`http://<ip-del-pc>/certificado`** (con `http`, sin la "s"). Se descarga `jarvis-ca.crt`.
+
+**Android**
+1. Ajustes › Seguridad y privacidad › Más ajustes de seguridad › **Instalar desde el almacenamiento** (o "Cifrado y credenciales › Instalar un certificado").
+2. Elija **Certificado de CA** › "Instalar de todos modos" › `jarvis-ca.crt`.
+
+**iPhone / iPad**
+1. Al abrir el enlace en **Safari**, acepte "Descargar perfil".
+2. Ajustes › General › **VPN y gestión de dispositivos** › JARVIS (Caddy Local Authority) › Instalar.
+3. Ajustes › General › Información › **Ajustes de confianza de certificados** › active Caddy Local Authority.
+
+> El certificado raíz no es secreto: la clave privada que firma los certificados nunca sale del PC (`%APPDATA%\Caddy`). Instalarlo sólo hace que el celular confíe en `https://<ip-del-pc>`.
+
+### 5. Entrar
+Abra **`https://<ip-del-pc>`**, inicie sesión y toque el micrófono para hablarle.
+
+### 6. IP fija (recomendado)
+Si el router le cambia la IP al PC, el celular ya no lo encuentra. En el panel del router (normalmente `http://192.168.1.1` o `http://192.168.0.1`) busque **"Reserva DHCP"** o **"IP estática"** y asigne siempre la misma IP a este PC (aparece al ejecutar `.\scripts\jarvis.ps1 estado`).
 
 ---
+
+## Seguridad: qué protege y qué no
+
+- **Contraseñas con Argon2**: se guardan cifradas de forma irreversible; ni JARVIS puede leerlas.
+- **Sesión en cookie** `HttpOnly` (el JavaScript de la página no la lee), `SameSite=Lax` (otros sitios no la usan) y `Secure` detrás de HTTPS. Vence a los 30 días.
+- **5 contraseñas equivocadas** seguidas bloquean ese usuario 5 minutos.
+- **El agente de voz del PC** entra con un token propio (`data/agent.token`), que nunca va a Git.
+- **No protege** si alguien ya tiene acceso al PC mismo o a la carpeta `data/`.
 
 ## Resumen
 
 | Desde | Dirección |
 |---|---|
-| El propio PC servidor | `https://localhost` |
-| Celular, tablet u otro PC de la casa | `https://192.168.1.50` o `https://jarvis-server.local` |
-| Fuera de casa | **No disponible** (decisión de privacidad). Si algún día lo quieres, la forma segura es una VPN como WireGuard o Tailscale, nunca abrir puertos en el router. |
+| El propio PC servidor | `http://localhost:8000` |
+| Celular, tablet u otro PC de la casa | `https://<ip-del-pc>` |
+| Fuera de casa | **No disponible** (decisión de privacidad). Si algún día lo quiere, la forma segura es una VPN como WireGuard o Tailscale, nunca abrir puertos en el router. |

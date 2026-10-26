@@ -103,7 +103,7 @@ flowchart LR
 | 8 | Texto a voz (Piper) | ✅ [bitácora](docs/etapas/08-texto-a-voz.md) |
 | 9 | "Jarvis" siempre atento + conversación fluida | ✅ [bitácora](docs/etapas/09-jarvis-siempre-atento.md) |
 | 10 | Memoria: recuerda lo que le cuentas | ✅ [bitácora](docs/etapas/10-memoria.md) |
-| 11 | Seguridad y acceso en la red local | ⚪ |
+| 11 | Seguridad y acceso en la red local | 🟡 [bitácora](docs/etapas/11-seguridad-red-local.md) · falta probar desde el celular |
 | 12 | Fine-tuning con LoRA | ⚪ |
 | 13 | Herramientas y versión 1.0 | ⚪ |
 

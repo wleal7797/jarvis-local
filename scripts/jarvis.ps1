@@ -3,6 +3,8 @@
 #   .\scripts\jarvis.ps1 iniciar        base de datos + Ollama + API (http://localhost:8000) + worker
 #   .\scripts\jarvis.ps1 iniciar -Gpu   igual, pero el worker indexa en la GPU (modo noche)
 #   .\scripts\jarvis.ps1 iniciar -SinVoz   sin el agente de voz (micrófono apagado)
+#   .\scripts\jarvis.ps1 iniciar -SinRed   sin Caddy (sólo en este PC: http://localhost:8000)
+#   (si Caddy está instalado, también arranca HTTPS para la red de la casa: Etapa 11)
 #   (por defecto también arranca el agente de voz: micrófono siempre activo, "Jarvis, …")
 #   .\scripts\jarvis.ps1 detener        libera RAM y GPU: apaga la API, descarga los modelos
 #                                       y detiene la base de datos de JARVIS
@@ -15,7 +17,8 @@ param(
     [string]$Accion = "estado",
     [switch]$TodoDocker,
     [switch]$Gpu,
-    [switch]$SinVoz
+    [switch]$SinVoz,
+    [switch]$SinRed
 )
 
 # "Continue": docker y ollama escriben avisos normales en stderr; los errores reales se
@@ -25,6 +28,7 @@ $root = Split-Path -Parent $PSScriptRoot
 $pidFile = Join-Path $root ".jarvis-api.pid"
 $workerPidFile = Join-Path $root ".jarvis-worker.pid"
 $voicePidFile = Join-Path $root ".jarvis-voz.pid"
+$caddyPidFile = Join-Path $root ".jarvis-caddy.pid"
 $python = Join-Path $root ".venv\Scripts\python.exe"
 
 function Write-Paso($texto) { Write-Host "-> $texto" -ForegroundColor Cyan }
@@ -66,6 +70,22 @@ function Stop-Tree($proc) {
 function Get-ApiProcess { Get-PidProcess $pidFile }
 function Get-WorkerProcess { Get-PidProcess $workerPidFile }
 function Get-VoiceProcess { Get-PidProcess $voicePidFile }
+function Get-CaddyProcess { Get-PidProcess $caddyPidFile }
+
+function Get-CaddyExe {
+    $cmd = Get-Command caddy -ErrorAction SilentlyContinue
+    if ($cmd) { return $cmd.Source }
+    $link = "$env:LOCALAPPDATA\Microsoft\WinGet\Links\caddy.exe"
+    if (Test-Path $link) { return $link }
+    return $null
+}
+
+# IP de este PC en la red de la casa (la de la conexión con salida a internet).
+function Get-LanIp {
+    $config = Get-NetIPConfiguration | Where-Object { $_.IPv4DefaultGateway } | Select-Object -First 1
+    if ($config) { return $config.IPv4Address.IPAddress }
+    return $null
+}
 
 function Show-Estado {
     $os = Get-CimInstance Win32_OperatingSystem
@@ -76,6 +96,8 @@ function Show-Estado {
     "Worker de ingesta: " + ($(if ($worker) { "encendido (PID $($worker.Id))" } else { "apagado" }))
     $voice = Get-VoiceProcess
     "Agente de voz: " + ($(if ($voice) { "escuchando (PID $($voice.Id)) · registro en logs\voz.log" } else { "apagado" }))
+    $caddy = Get-CaddyProcess
+    "Red de la casa (Caddy): " + ($(if ($caddy) { "https://$(Get-LanIp) (PID $($caddy.Id))" } else { "apagada" }))
     if (Test-Docker) {
         $db = docker ps --filter "name=jarvis_db" --format "{{.Status}}"
         "Base de datos: " + ($(if ($db) { $db } else { "detenida" }))
@@ -144,7 +166,27 @@ switch ($Accion) {
                 $vproc.Id | Set-Content $voicePidFile
             }
         }
+        $lanUrl = $null
+        if (-not $SinRed) {
+            $caddyExe = Get-CaddyExe
+            $ip = Get-LanIp
+            if (Get-CaddyProcess) {
+                Write-Paso "Caddy ya estaba encendido"
+                $lanUrl = "https://$ip"
+            } elseif ($caddyExe -and $ip) {
+                Write-Paso "Red de la casa: https://$ip (Caddy)"
+                $env:JARVIS_IP = $ip
+                $cproc = Start-Process -FilePath $caddyExe -ArgumentList "run", "--config", "deploy\caddy\Caddyfile", "--adapter", "caddyfile" `
+                    -WorkingDirectory $root -WindowStyle Hidden -PassThru `
+                    -RedirectStandardOutput (Join-Path $root "logs\caddy.log") -RedirectStandardError (Join-Path $root "logs\caddy-error.log")
+                $cproc.Id | Set-Content $caddyPidFile
+                $lanUrl = "https://$ip"
+            } elseif (-not $caddyExe) {
+                Write-Host "   (Caddy no está instalado: sólo en este PC. Ver scripts\red_local.ps1)" -ForegroundColor Yellow
+            }
+        }
         Write-Host "JARVIS listo: http://localhost:8000" -ForegroundColor Green
+        if ($lanUrl) { Write-Host "Desde el celular (misma Wi-Fi): $lanUrl" -ForegroundColor Green }
     }
     "detener" {
         $api = Get-ApiProcess
@@ -159,6 +201,12 @@ switch ($Accion) {
             Stop-Tree $voice
         }
         Remove-Item $voicePidFile -ErrorAction SilentlyContinue
+        $caddy = Get-CaddyProcess
+        if ($caddy) {
+            Write-Paso "Apagando Caddy (red de la casa)"
+            Stop-Tree $caddy
+        }
+        Remove-Item $caddyPidFile -ErrorAction SilentlyContinue
         $worker = Get-WorkerProcess
         if ($worker) {
             Write-Paso "Apagando el worker (las tareas en curso se retoman al volver a iniciar)"

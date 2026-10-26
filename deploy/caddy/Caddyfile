@@ -1,0 +1,48 @@
+# Caddy: HTTPS para entrar a JARVIS desde la red de la casa (Etapa 11).
+#
+# No se usa a mano: `.\scripts\jarvis.ps1 iniciar` lo enciende con JARVIS_IP = la IP
+# de este PC en la red local (por ejemplo 192.168.1.50).
+#
+#   Celular / tablet  ──HTTPS──►  Caddy (:443)  ──HTTP──►  API (127.0.0.1:8000)
+#
+# La API sigue escuchando sólo en 127.0.0.1: desde la red únicamente se llega por Caddy.
+
+{
+	# Nunca pide certificados a internet: los firma la autoridad local de Caddy (este PC).
+	local_certs
+	# No instala su certificado raíz en Windows por su cuenta: eso lo decide usted
+	# (scripts\red_local.ps1). En los celulares se instala a mano (ver docs/02).
+	skip_install_trust
+	# Los navegadores no envían el nombre del sitio cuando se entra por IP.
+	default_sni {$JARVIS_IP}
+	admin localhost:2019
+}
+
+# HTTP: sólo para descargar el certificado en el celular; todo lo demás pasa a HTTPS.
+http://{$JARVIS_IP} {
+	handle /certificado* {
+		reverse_proxy 127.0.0.1:8000
+	}
+	handle {
+		redir https://{host}{uri}
+	}
+}
+
+https://{$JARVIS_IP} {
+	tls internal
+	encode gzip
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy same-origin
+		-Server
+	}
+	# Los WebSocket (chat y estado del agente) pasan sin configuración extra.
+	reverse_proxy 127.0.0.1:8000
+	log {
+		output file logs/caddy-acceso.log {
+			roll_size 5MiB
+			roll_keep 3
+		}
+	}
+}

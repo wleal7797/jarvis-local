@@ -16,6 +16,7 @@ from fastapi import FastAPI, Request, Response
 from fastapi.staticfiles import StaticFiles
 
 from app.controllers import (
+    auth_controller,
     chat_controller,
     health_controller,
     knowledge_controller,
@@ -25,8 +26,10 @@ from app.controllers import (
 )
 from app.core.config import get_settings
 from app.core.database import create_engine, create_session_factory
+from app.core.keys import load_or_create
 from app.core.logging import setup_logging
 from app.core.preferences import load_preferences
+from app.services.auth_service import AuthService
 from app.services.stt_service import FasterWhisperSTT, WhisperSettings
 from app.services.tts_service import PiperSettings, PiperTTS
 from app.services.voice_status import VoiceStatusHub
@@ -64,6 +67,13 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         )
     )
     app.state.voice_status = VoiceStatusHub()
+    # Inicio de sesión (Etapa 11): claves creadas solas en data/ (nunca van a Git).
+    app.state.auth = AuthService(
+        app.state.session_factory,
+        load_or_create(settings.secret_key_file),
+        session_days=settings.auth_session_days,
+    )
+    app.state.agent_token = load_or_create(settings.agent_token_file)
     stt_watcher = asyncio.create_task(app.state.stt.run_idle_watcher())
     tts_watcher = asyncio.create_task(app.state.tts.run_idle_watcher())
     logger.info("JARVIS iniciado", extra={"environment": settings.environment})
@@ -109,6 +119,7 @@ def create_app() -> FastAPI:
 
     app.mount("/static", StaticFiles(directory=page_controller.VIEWS_DIR / "static"), "static")
     app.include_router(page_controller.router)
+    app.include_router(auth_controller.router)
     app.include_router(health_controller.router)
     app.include_router(chat_controller.router)
     app.include_router(chat_controller.ws_router)

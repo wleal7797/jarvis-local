@@ -65,6 +65,9 @@ class FakeMemory:
     async def facts_for_prompt(self, user_id: int) -> list[str]:
         return self.facts
 
+    async def all_for(self, user_id: int) -> list:
+        return []
+
     async def relevant(self, user_id: int, text: str) -> list[str]:
         return self.facts[:3]
 
@@ -102,3 +105,20 @@ class FakeEmbedder:
             vector[slot] += 1.0
         norm = math.sqrt(sum(v * v for v in vector)) or 1.0
         return [v / norm for v in vector]
+
+
+def owner_user():
+    """El dueño, para las pruebas que no prueban el inicio de sesión."""
+    from types import SimpleNamespace
+
+    return SimpleNamespace(
+        id=1, username="dueno", display_name="Dueño", role="owner", is_active=True
+    )
+
+
+def as_owner(app) -> None:
+    """Hace que todas las peticiones de `app` entren como el dueño."""
+    from app.core.dependencies import get_current_user, get_optional_user
+
+    app.dependency_overrides[get_current_user] = owner_user
+    app.dependency_overrides[get_optional_user] = owner_user
