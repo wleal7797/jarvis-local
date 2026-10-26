@@ -1,5 +1,9 @@
 """Estado de la conversación por voz: ¿hace falta decir "Jarvis" o ya están hablando?
 
+Por defecto (desde la Etapa 10) el modo conversación está APAGADO: toda frase tiene que
+empezar con "Jarvis". En casa, con el modo conversación, respondía a lo que se hablaba en
+el cuarto justo después de contestar. Se puede volver a encender con `--seguir 8`.
+
     DORMIDO ──"Jarvis, …"──► ATENDIENDO ──respuesta──► HABLANDO ──termina──► ESCUCHANDO
        ▲                                                 │ "Jarvis, …"          │
        │                                                 └──► (se calla) ◄──────┤
@@ -29,7 +33,7 @@ class Mode(Enum):
 
 @dataclass
 class ConversationSettings:
-    follow_up_seconds: float = 8.0
+    follow_up_seconds: float = 0.0  # 0 = siempre hay que decir "Jarvis"
     session_minutes: float = 5.0
     echo_overlap: float = 0.6  # si el 60 % de las palabras coincide con lo que dice, es eco
 
@@ -101,7 +105,7 @@ class Conversation:
 
     def _expire(self) -> None:
         now = self.clock()
-        if self.mode == Mode.ESCUCHANDO and now > self._listening_until:
+        if self.mode == Mode.ESCUCHANDO and now >= self._listening_until:
             self.mode = Mode.DORMIDO
         if now - self._last_activity > self.settings.session_minutes * 60:
             self.conversation_id = None  # tras 5 min de silencio, conversación nueva

@@ -247,7 +247,10 @@ def main() -> None:
         help='cómo reconocer "Jarvis" (whisper: pronunciación en español)',
     )
     parser.add_argument(
-        "--seguir", type=float, default=8.0, help="segundos que sigue escuchando sin el nombre"
+        "--seguir",
+        type=float,
+        default=0.0,
+        help='segundos que sigue escuchando sin el nombre (0 = siempre decir "Jarvis")',
     )
     parser.add_argument("--simular", nargs="+", help="usar archivos WAV en vez del micrófono")
     parser.add_argument("--mudo", action="store_true", help="no reproducir sonido")

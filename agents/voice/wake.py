@@ -17,13 +17,19 @@ from app.services.stt_service import normalize_name
 
 SAMPLE_RATE = 16000
 _NAME = re.compile(r"\bjarvis\b", re.IGNORECASE)
-_CALL_WORDS = 4  # el nombre tiene que estar al principio: "Jarvis, …", "Hola Jarvis, …"
+# Sólo se le habla a JARVIS si la frase EMPIEZA con su nombre: "Jarvis, …".
+# Se acepta un saludo corto antes ("Hola Jarvis", "Oye Jarvis"), nada más.
+_GREETINGS = {"hola", "oye", "hey", "ey", "ok", "okay", "bueno"}
+_WORD = re.compile(r"[\wáéíóúñü]+", re.IGNORECASE)
 
 
-def mentions_name_at_start(text: str, words: int = _CALL_WORDS) -> bool:
-    """ "Hola Jarvis, ¿qué hora es?" → sí. "¿Qué puerto usa la base de JARVIS?" → no."""
-    first = " ".join(normalize_name(text).split()[:words])
-    return bool(_NAME.search(first))
+def mentions_name_at_start(text: str) -> bool:
+    """ "Jarvis, ¿qué hora es?" y "Hola Jarvis…" → sí.
+    "Le dije a Jarvis que…" o "¿Qué puerto usa JARVIS?" → no."""
+    words = _WORD.findall(normalize_name(text))
+    if words and words[0].lower() in _GREETINGS:
+        words = words[1:]
+    return bool(words) and bool(_NAME.fullmatch(words[0]))
 
 
 @dataclass(frozen=True)

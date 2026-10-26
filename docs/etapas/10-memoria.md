@@ -86,6 +86,16 @@ sequenceDiagram
 
 **Lo que se cuenta no se busca:** "Me gusta el café sin azúcar" ya no busca en los documentos (antes citaba *[1]* sin sentido).
 
+## Sólo responde si la frase empieza con "Jarvis"
+
+Al probarlo en casa, el micrófono siempre atento oyó una conversación del cuarto: una frase se coló como si fuera para él y, con el **modo conversación** (8 s sin pedir el nombre), siguió respondiendo frase tras frase. Una de ellas quedó guardada como recuerdo (se borró).
+
+Ahora:
+- **Toda frase tiene que empezar con "Jarvis"** ("Yarbis"). Sólo se acepta un saludo corto antes: *"Hola Jarvis…"*, *"Oye Jarvis…"*.
+- *"Le dije a Jarvis que…"* o *"el doctor Jarvis dijo…"* ya no lo despiertan (antes bastaba con que el nombre estuviera entre las 4 primeras palabras).
+- **El modo conversación está apagado** por defecto. Se puede encender con `python -m agents.voice --seguir 8`.
+- Así, por voz, JARVIS sólo aprende de frases que le dirigieron a él.
+
 ## Calificaciones 👍 / 👎
 
 - `PUT /api/messages/{id}/feedback` con `{"rating": 1 | -1, "correction": "…"}`; se puede cambiar de opinión.
