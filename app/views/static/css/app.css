@@ -282,6 +282,30 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
 .speaking__bars span:nth-child(3) { animation-delay: 0.3s; }
 @keyframes bars { 0%, 100% { height: 4px; } 50% { height: 12px; } }
 @media (prefers-reduced-motion: reduce) { .speaking__bars span { animation: none; height: 8px; } }
+/* Agente de voz del PC: qué está haciendo */
+.agent {
+  display: flex; align-items: center; gap: 8px; margin: 4px auto 0; padding: 6px 14px;
+  max-width: min(92%, 640px); border: 1px solid var(--border); border-radius: 999px;
+  background: var(--surface); color: var(--muted); font-size: 13px; box-shadow: var(--shadow);
+}
+.agent[hidden] { display: none; }
+.agent__text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.agent__icon { display: grid; place-items: center; flex: none; }
+.agent__icon svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.agent__dots { display: none; gap: 3px; flex: none; }
+.agent__dots span { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); animation: blink 1.2s infinite ease-in-out; }
+.agent__dots span:nth-child(2) { animation-delay: 0.15s; }
+.agent__dots span:nth-child(3) { animation-delay: 0.3s; }
+.agent[data-state="escuchando"], .agent[data-state="pensando"], .agent[data-state="buscando"], .agent[data-state="hablando"] {
+  border-color: var(--accent); color: var(--text); background: var(--accent-soft);
+}
+.agent[data-state="escuchando"] .agent__icon, .agent[data-state="atento"] .agent__icon { color: var(--accent-strong); animation: glow 1.4s ease-in-out infinite; }
+.agent[data-state="pensando"] .agent__dots, .agent[data-state="buscando"] .agent__dots, .agent[data-state="hablando"] .agent__dots { display: inline-flex; }
+@keyframes glow { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+.thinking { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 14px; }
+@media (prefers-reduced-motion: reduce) {
+  .agent__dots span, .agent__icon { animation: none !important; }
+}
 .listen-btn { background: none; border: 0; padding: 0; color: var(--accent-strong); font: inherit; font-size: 12px; cursor: pointer; }
 .listen-btn:hover { text-decoration: underline; }
 .listen-btn:disabled { opacity: 0.6; cursor: wait; }

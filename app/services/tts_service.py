@@ -38,6 +38,7 @@ class SpeechAudio:
 
 class TextToSpeech(Protocol):
     async def synthesize(self, text: str) -> SpeechAudio: ...
+    def warm(self) -> None: ...
 
 
 # ---------- Limpiar el texto antes de leerlo ----------
@@ -213,6 +214,14 @@ class PiperTTS:
                 audio_seconds=round(seconds, 2),
                 processing_seconds=round(time.perf_counter() - started, 3),
             )
+
+    def warm(self) -> None:
+        """Carga la voz si hace falta y reinicia la cuenta de inactividad."""
+        with self._lock:
+            if self._voice is None:
+                logger.info("cargando voz", extra={"voice": self._cfg.voice})
+                self._voice = self._loader(self._cfg)
+            self._last_used = time.monotonic()
 
     def unload_if_idle(self) -> bool:
         with self._lock:

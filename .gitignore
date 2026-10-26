@@ -61,3 +61,4 @@ desktop.ini
 .claude/
 .jarvis-api.pid
 .jarvis-worker.pid
+.jarvis-voz.pid

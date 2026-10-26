@@ -144,7 +144,7 @@ No hace falta instalar esto ahora. Cada etapa lo instala y lo documenta.
 | 6 | Artículos de Wikipedia elegidos (API pública, sin descargar el volcado completo) | panel *Conocimiento* | ~50 KB por artículo |
 | 7 | faster-whisper + `av<14` (+ modelo `small`, con Silero VAD incluido) | `pip` (el modelo se descarga solo la primera vez) | ~600 MB |
 | 8 | Piper (`piper-tts`) + voces en español | `pip` + `python -m scripts.download_tts_voices` (Piper y Kokoro, a `data/tts`) | ~400 MB |
-| 9 | openWakeWord (`hey_jarvis`), sounddevice | `pip` (el modelo se descarga solo) | ~50 MB |
+| 9 | openWakeWord (filtro de voz Silero + `hey_jarvis`), sounddevice, Whisper `base` | `pip` (los modelos se descargan solos) | ~200 MB |
 | 10 | Caddy | `winget search caddy` y luego `winget install` con el id que aparezca, o descarga desde <https://caddyserver.com/download> | ~40 MB |
 | 10 | argon2-cffi, PyJWT | `pip` | ~5 MB |
 | 12 | Cuenta de Google para Colab o cuenta de Kaggle | web | — |

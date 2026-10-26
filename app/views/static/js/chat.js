@@ -160,7 +160,7 @@
 
   function startReply() {
     const reply = addMessage("assistant", "");
-    reply.bubble.innerHTML = '<span class="typing" aria-label="JARVIS está escribiendo"><span></span><span></span><span></span></span>';
+    reply.bubble.innerHTML = '<span class="thinking"><span class="typing" aria-hidden="true"><span></span><span></span><span></span></span>Pensando…</span>';
     state.reply = { el: reply, text: "", frame: null, wakeTimer: null };
     // Si el modelo estaba descargado de la GPU, la primera palabra tarda ~10 s: avisarlo.
     state.reply.wakeTimer = setTimeout(() => {
@@ -245,20 +245,28 @@
         const isNew = state.conversationId !== data.conversation_id;
         state.conversationId = data.conversation_id;
         if (isNew) history.replaceState(null, "", "#c=" + data.conversation_id);
+      } else if (data.type === "searching") {
+        if (state.reply && state.reply.text === "") {
+          clearWakeTimer();
+          state.reply.el.bubble.insertAdjacentHTML(
+            "beforeend",
+            '<span class="waking" data-search>Buscando en sus documentos…</span>'
+          );
+        }
       } else if (data.type === "sources") {
         if (state.reply) {
           state.reply.sources = data.sources;
           if (state.reply.text === "") {
             clearWakeTimer();
             const n = data.sources.length;
-            state.reply.el.bubble.insertAdjacentHTML(
-              "beforeend",
-              '<span class="waking">Consultando ' + n + (n === 1 ? " documento…" : " documentos…") + "</span>"
-            );
+            const label = "Leyendo " + n + (n === 1 ? " documento…" : " documentos…");
+            const line = state.reply.el.bubble.querySelector("[data-search]");
+            if (line) line.textContent = label;
+            else state.reply.el.bubble.insertAdjacentHTML("beforeend", '<span class="waking">' + label + "</span>");
           }
         }
       } else if (data.type === "audio") {
-        if (window.JarvisSpeaker) window.JarvisSpeaker.enqueue(data.audio);
+        if (window.JarvisSpeaker) window.JarvisSpeaker.enqueue(data.audio, state.forceVoice);
       } else if (data.type === "audio_error") {
         console.warn("Voz no disponible:", data.message);
       } else if (data.type === "token") {
@@ -287,13 +295,15 @@
     addMessage("user", message, options && options.meta);
     if (!state.conversationId) els.title.textContent = message.slice(0, 60);
     if (window.JarvisSpeaker) window.JarvisSpeaker.stop(); // un mensaje nuevo interrumpe la voz
+    state.forceVoice = Boolean(options && options.voice);
     startReply();
     setBusy(true);
     state.ws.send(
       JSON.stringify({
         message: message,
         conversation_id: state.conversationId,
-        voice: Boolean(window.JarvisSpeaker && window.JarvisSpeaker.enabled()),
+        // Si se le habló por voz, responde siempre en voz alta; si se escribió, según el altavoz.
+        voice: Boolean(options && options.voice) || Boolean(window.JarvisSpeaker && window.JarvisSpeaker.enabled()),
       })
     );
     els.input.value = "";
@@ -306,6 +316,7 @@
   window.JarvisChat = {
     send: sendMessage,
     isBusy: () => state.busy || !state.connected,
+    refresh: () => loadConversations(),
   };
 
   // ---------- Conversaciones ----------

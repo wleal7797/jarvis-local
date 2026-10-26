@@ -194,7 +194,7 @@ class StubChat:
     async def ensure_conversation(self, user_id: int, conversation_id: int) -> None:
         return None
 
-    def answer(self, user_id: int, text: str, conversation_id: int | None = None):
+    def answer(self, user_id: int, text: str, conversation_id: int | None = None, **_):
         return chat_events("Con mucho gusto, ", "aquí estoy para ayudarle.")
 
 

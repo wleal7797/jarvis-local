@@ -42,7 +42,7 @@
   function tick() {
     const seconds = Math.floor((Date.now() - startedAt) / 1000);
     const left = Math.ceil((MAX_MS - (Date.now() - startedAt)) / 1000);
-    showStatus("Escuchando… 0:" + String(seconds).padStart(2, "0") + " · toca el micrófono para enviar" + (left <= 5 ? " (" + left + " s)" : ""));
+    showStatus("Escuchando… 0:" + String(seconds).padStart(2, "0") + " · toque el micrófono para enviar" + (left <= 5 ? " (" + left + " s)" : ""));
   }
 
   async function start() {
@@ -54,7 +54,7 @@
     } catch (_) {
       showStatus(
         window.isSecureContext
-          ? "No hay permiso para usar el micrófono. Revísalo en la configuración del navegador."
+          ? "No hay permiso para usar el micrófono. Revíselo en la configuración del navegador."
           : "El micrófono sólo funciona en localhost o con HTTPS (llega en la Etapa 11).",
         true
       );
@@ -91,11 +91,11 @@
       return;
     }
     if (Date.now() - startedAt < MIN_MS) {
-      showStatus("Fue muy corto. Toca el micrófono, habla y vuelve a tocarlo.", true);
+      showStatus("Fue muy corto. Toque el micrófono, hable y vuelva a tocarlo.", true);
       return;
     }
     const blob = new Blob(chunks, { type: recorder.mimeType || "audio/webm" });
-    showStatus("Transcribiendo… (la primera vez carga el modelo de voz)");
+    showStatus("Transcribiendo…");
     button.disabled = true;
     try {
       const form = new FormData();
@@ -104,12 +104,12 @@
       const body = await response.json();
       if (!response.ok) throw new Error(body.detail || response.statusText);
       if (!body.text) {
-        showStatus("No te entendí. Intenta de nuevo, un poco más cerca del micrófono.", true);
+        showStatus("No le entendí. Intente de nuevo, un poco más cerca del micrófono.", true);
         return;
       }
       showStatus("");
       const meta = "Por voz · transcrito en " + String(body.processing_seconds).replace(".", ",") + " s";
-      if (!window.JarvisChat.send(body.text, { meta: meta })) {
+      if (!window.JarvisChat.send(body.text, { meta: meta, voice: true })) {
         // Si no se pudo enviar (por ejemplo, sin conexión), el texto queda en la caja.
         const input = document.getElementById("input");
         input.value = body.text;

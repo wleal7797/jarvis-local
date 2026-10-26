@@ -2,6 +2,8 @@
 #
 #   .\scripts\jarvis.ps1 iniciar        base de datos + Ollama + API (http://localhost:8000) + worker
 #   .\scripts\jarvis.ps1 iniciar -Gpu   igual, pero el worker indexa en la GPU (modo noche)
+#   .\scripts\jarvis.ps1 iniciar -SinVoz   sin el agente de voz (micrófono apagado)
+#   (por defecto también arranca el agente de voz: micrófono siempre activo, "Jarvis, …")
 #   .\scripts\jarvis.ps1 detener        libera RAM y GPU: apaga la API, descarga los modelos
 #                                       y detiene la base de datos de JARVIS
 #   .\scripts\jarvis.ps1 detener -TodoDocker   además apaga Docker/WSL (libera ~2 GB más;
@@ -12,7 +14,8 @@ param(
     [ValidateSet("iniciar", "detener", "estado")]
     [string]$Accion = "estado",
     [switch]$TodoDocker,
-    [switch]$Gpu
+    [switch]$Gpu,
+    [switch]$SinVoz
 )
 
 # "Continue": docker y ollama escriben avisos normales en stderr; los errores reales se
@@ -21,6 +24,7 @@ $ErrorActionPreference = "Continue"
 $root = Split-Path -Parent $PSScriptRoot
 $pidFile = Join-Path $root ".jarvis-api.pid"
 $workerPidFile = Join-Path $root ".jarvis-worker.pid"
+$voicePidFile = Join-Path $root ".jarvis-voz.pid"
 $python = Join-Path $root ".venv\Scripts\python.exe"
 
 function Write-Paso($texto) { Write-Host "-> $texto" -ForegroundColor Cyan }
@@ -61,6 +65,7 @@ function Stop-Tree($proc) {
 
 function Get-ApiProcess { Get-PidProcess $pidFile }
 function Get-WorkerProcess { Get-PidProcess $workerPidFile }
+function Get-VoiceProcess { Get-PidProcess $voicePidFile }
 
 function Show-Estado {
     $os = Get-CimInstance Win32_OperatingSystem
@@ -69,6 +74,8 @@ function Show-Estado {
     "API JARVIS: " + ($(if ($api) { "encendida (PID $($api.Id))" } else { "apagada" }))
     $worker = Get-WorkerProcess
     "Worker de ingesta: " + ($(if ($worker) { "encendido (PID $($worker.Id))" } else { "apagado" }))
+    $voice = Get-VoiceProcess
+    "Agente de voz: " + ($(if ($voice) { "escuchando (PID $($voice.Id)) · registro en logs\voz.log" } else { "apagado" }))
     if (Test-Docker) {
         $db = docker ps --filter "name=jarvis_db" --format "{{.Status}}"
         "Base de datos: " + ($(if ($db) { $db } else { "detenida" }))
@@ -121,6 +128,22 @@ switch ($Accion) {
                 -RedirectStandardOutput (Join-Path $root "logs\worker.log") -RedirectStandardError (Join-Path $root "logs\worker-error.log")
             $wproc.Id | Set-Content $workerPidFile
         }
+        if (-not $SinVoz) {
+            if (Get-VoiceProcess) {
+                Write-Paso "El agente de voz ya estaba encendido"
+            } else {
+                # Espera a que la API responda: el agente la necesita para arrancar.
+                for ($i = 0; $i -lt 30; $i++) {
+                    try { if ((Invoke-WebRequest "http://127.0.0.1:8000/health" -UseBasicParsing -TimeoutSec 2).StatusCode -eq 200) { break } } catch {}
+                    Start-Sleep -Seconds 1
+                }
+                Write-Paso 'Agente de voz: micrófono activo, diga "Jarvis, …" (registro en logs\voz.log)'
+                $vproc = Start-Process -FilePath $python -ArgumentList "-m", "agents.voice" `
+                    -WorkingDirectory $root -WindowStyle Hidden -PassThru `
+                    -RedirectStandardOutput (Join-Path $root "logs\voz.log") -RedirectStandardError (Join-Path $root "logs\voz-error.log")
+                $vproc.Id | Set-Content $voicePidFile
+            }
+        }
         Write-Host "JARVIS listo: http://localhost:8000" -ForegroundColor Green
     }
     "detener" {
@@ -130,6 +153,12 @@ switch ($Accion) {
             Stop-Tree $api
         }
         Remove-Item $pidFile -ErrorAction SilentlyContinue
+        $voice = Get-VoiceProcess
+        if ($voice) {
+            Write-Paso "Apagando el agente de voz (micrófono)"
+            Stop-Tree $voice
+        }
+        Remove-Item $voicePidFile -ErrorAction SilentlyContinue
         $worker = Get-WorkerProcess
         if ($worker) {
             Write-Paso "Apagando el worker (las tareas en curso se retoman al volver a iniciar)"

@@ -27,6 +27,23 @@ class SpeakIn(BaseModel):
     text: str = Field(min_length=1, max_length=2000)
 
 
+class AgentStatusIn(BaseModel):
+    state: str = Field(examples=["pensando"])
+    text: str = Field(default="", max_length=500)
+
+
+class AgentStatusOut(BaseModel):
+    state: str
+    text: str
+    at: float
+
+
+class WarmOut(BaseModel):
+    stt: bool
+    tts: bool
+    llm: bool
+
+
 class TranscriptionOut(BaseModel):
     text: str
     language: str

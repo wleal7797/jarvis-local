@@ -36,6 +36,13 @@ CONTEXT_INSTRUCTIONS = (
 )
 
 
+# Por voz: respuestas cortas que se escuchan bien (va en el mensaje, no en el historial).
+SPOKEN_INSTRUCTIONS = (
+    "(Respuesta hablada: sea breve, una o dos frases, sin listas ni formato. "
+    "No invente datos de la casa, el clima ni la hora.)"
+)
+
+
 def estimate_tokens(text: str) -> int:
     """Estimación rápida: en español, un token son unos 4 caracteres."""
     return len(text) // 4 + 1
@@ -86,8 +93,12 @@ def build_messages(
     history: Sequence[Message],
     question: str,
     context: Sequence["RetrievedChunk"] = (),
+    *,
+    spoken: bool = False,
 ) -> list[ChatMessage]:
     messages = [ChatMessage(role=m.role, content=m.content) for m in trim_history(history)]  # type: ignore[arg-type]
     content = f"{format_context(context)}\n\nPregunta: {question}" if context else question
+    if spoken:
+        content = f"{content}\n\n{SPOKEN_INSTRUCTIONS}"
     messages.append(ChatMessage(role="user", content=content))
     return messages

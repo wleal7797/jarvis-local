@@ -50,8 +50,9 @@
     render();
   }
 
-  function enqueue(base64) {
-    if (!enabled) return;
+  // `force`: se le habló por micrófono, así que responde en voz alta aunque el altavoz esté apagado.
+  function enqueue(base64, force) {
+    if (!enabled && !force) return;
     queue.push(toUrl(base64));
     playNext();
   }

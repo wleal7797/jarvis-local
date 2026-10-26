@@ -40,9 +40,15 @@ class Settings(BaseSettings):
     rag_top_k: int = 3
     rag_min_similarity: float = 0.5
     rag_min_similarity_with_keywords: float = 0.42
+    # Conversación por voz: menos contexto para empezar a hablar antes (Etapa 9).
+    rag_voice_context_tokens: int = 1100
+    # Respuestas habladas: tope de tokens (una o dos frases; evita monólogos lentos).
+    voice_max_tokens: int = 200
 
     # Voz a texto (Etapa 7)
     stt_model: str = "small"
+    # "auto": GPU si se puede (0,5 s por frase), si no CPU (~3 s). También "cuda" o "cpu".
+    stt_device: str = "auto"
     stt_language: str = "es"
     stt_threads: int = 4
     stt_initial_prompt: str = (

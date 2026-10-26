@@ -165,8 +165,8 @@ async def test_chat_envia_fuentes_y_las_guarda(
     events = [e async for e in service.answer(owner.id, "¿Qué días se riegan las plantas?")]
     types = [e["type"] for e in events]
 
-    assert types[:2] == ["start", "sources"]
-    assert events[1]["sources"][0]["section"] == "Jardín"
+    assert types[:3] == ["start", "searching", "sources"]
+    assert events[2]["sources"][0]["section"] == "Jardín"
     assert events[-1]["cited"] == [1]
     # El modelo recibió el contexto numerado.
     assert "[1] Manual de la casa — Jardín" in llm.calls[0][-1].content
@@ -232,3 +232,53 @@ async def test_endpoints_de_conocimiento(test_db_url: str):
         async with engine.begin() as conn:
             await conn.execute(text("TRUNCATE users, sources RESTART IDENTITY CASCADE"))
         await engine.dispose()
+
+
+@pytest.mark.parametrize(
+    ("text", "small"),
+    [
+        ("Gracias, Jarvis.", True),
+        ("Jarvis, ¿cómo estás?", True),
+        ("¿Qué hora es?", True),
+        ("¿Quién escribió Cien años de soledad?", False),
+        ("¿En qué puerto escucha la base de datos?", False),
+    ],
+)
+def test_charla_corta_no_busca_documentos(text: str, small: bool):
+    from app.services.chat_service import is_small_talk
+
+    assert is_small_talk(text) is small
+
+
+@pytest.mark.parametrize(
+    ("text", "search"),
+    [
+        ("¿Quién escribió Cien años de soledad?", True),
+        ("Jarvis, explíqueme cómo se riegan las plantas de la casa", True),
+        ("Dime en qué puerto escucha la base de datos", True),
+        ("Recuérdame comprar leche mañana a las 8 de la mañana.", False),
+        ("Me gusta el café sin azúcar por las mañanas.", False),
+        ("¿Qué hora es?", False),  # charla corta
+    ],
+)
+def test_por_voz_solo_las_preguntas_buscan_documentos(text: str, search: bool):
+    from app.services.chat_service import voice_needs_documents
+
+    assert voice_needs_documents(text) is search
+
+
+@pytest.mark.db
+async def test_por_voz_la_charla_corta_no_usa_documentos(indexed, owner, session_factory):
+    calls = []
+
+    class SpyRetriever:
+        async def search(self, query, owner_user_id=None):
+            calls.append(query)
+            return []
+
+    service = ChatService(
+        session_factory, FakeLLM("De nada."), "jarvis:base", lambda s: SpyRetriever()
+    )
+    [e async for e in service.answer(owner.id, "Gracias, Jarvis.", voice=True)]
+    [e async for e in service.answer(owner.id, "Gracias, Jarvis.", voice=False)]
+    assert calls == ["Gracias, Jarvis."]  # sólo el modo texto buscó
