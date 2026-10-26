@@ -33,7 +33,7 @@ app/services/prompt_builder.py      # recuerdos + fecha al principio; reloj sól
 app/views/templates/memory.html + static/js/memory.js    # panel "Memoria"
 app/views/static/js/feedback.js     # 👍 / 👎, corrección y nota "Lo recordaré"
 scripts/evaluate_memory.py          # evaluación (ver 10-evaluacion-memoria.md)
-tests/test_memory.py                # 18 pruebas
+tests/test_memory.py                # 27 pruebas (202 en total)
 ```
 
 Las tablas `memories`, `feedback` y `training_examples` ya existían desde la Etapa 2 (modelo relacional): no hizo falta migración.
