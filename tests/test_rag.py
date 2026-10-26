@@ -232,3 +232,36 @@ async def test_endpoints_de_conocimiento(test_db_url: str):
         async with engine.begin() as conn:
             await conn.execute(text("TRUNCATE users, sources RESTART IDENTITY CASCADE"))
         await engine.dispose()
+
+
+@pytest.mark.parametrize(
+    ("text", "small"),
+    [
+        ("Gracias, Jarvis.", True),
+        ("Jarvis, ¿cómo estás?", True),
+        ("¿Qué hora es?", True),
+        ("¿Quién escribió Cien años de soledad?", False),
+        ("¿En qué puerto escucha la base de datos?", False),
+    ],
+)
+def test_charla_corta_no_busca_documentos(text: str, small: bool):
+    from app.services.chat_service import is_small_talk
+
+    assert is_small_talk(text) is small
+
+
+@pytest.mark.db
+async def test_por_voz_la_charla_corta_no_usa_documentos(indexed, owner, session_factory):
+    calls = []
+
+    class SpyRetriever:
+        async def search(self, query, owner_user_id=None):
+            calls.append(query)
+            return []
+
+    service = ChatService(
+        session_factory, FakeLLM("De nada."), "jarvis:base", lambda s: SpyRetriever()
+    )
+    [e async for e in service.answer(owner.id, "Gracias, Jarvis.", voice=True)]
+    [e async for e in service.answer(owner.id, "Gracias, Jarvis.", voice=False)]
+    assert calls == ["Gracias, Jarvis."]  # sólo el modo texto buscó

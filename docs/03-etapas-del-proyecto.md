@@ -166,15 +166,16 @@ flowchart LR
 ---
 
 ## Etapa 9 · "Jarvis" siempre atento y conversación fluida
-**Tecnología:** openWakeWord (modelo `hey_jarvis` y, si hace falta, uno propio para "Jarvis") + Silero VAD + `sounddevice`.
+**Tecnología:** Silero VAD + Whisper `base` para reconocer "Jarvis" ("Yarbis") · openWakeWord `hey_jarvis` como opción · `sounddevice`.
 **Objetivo:** hablarle sin tocar nada. Dices *"Jarvis, ¿cómo estás?"* y responde por los parlantes, como en una conversación.
 
-**Entregables**
-- `VoiceAgent`: proceso aparte con el **micrófono siempre activo** que detecta el nombre "Jarvis" sin enviar nada a internet.
-- **Modo conversación:** después de responder sigue escuchando unos segundos, así no hay que repetir "Jarvis" en cada frase.
-- **Interrumpir:** si le hablas mientras habla, se calla y te escucha.
-- Sonido de confirmación al activarse, respuesta por los parlantes del PC y ajuste del umbral contra activaciones falsas.
-- Medición: activaciones correctas, falsas activaciones por hora y tiempo de respuesta.
+**Entregables** · ✅ [bitácora](etapas/09-jarvis-siempre-atento.md)
+- [x] `VoiceAgent`: proceso aparte con el **micrófono siempre activo** que detecta el nombre "Jarvis" sin enviar nada a internet.
+- [x] **Modo conversación:** después de responder sigue escuchando 8 segundos, así no hay que repetir "Jarvis" en cada frase.
+- [x] **Interrumpir:** si le dices "Jarvis" mientras habla, se calla y te escucha (su propia voz no lo interrumpe).
+- [x] Sonido de confirmación al activarse y respuesta por los parlantes del PC.
+- [x] Medición: 7/7 detecciones y 0/12 falsas alarmas con audios de prueba; tiempos por paso en cada respuesta.
+- [ ] Pendiente con el micrófono real: falsas alarmas por hora en la casa (ruido, TV).
 
 **Terminado cuando:** dices "Jarvis, ¿cómo estás?" desde 2 metros, responde en voz alta, y puedes seguir conversando sin repetir su nombre.
 

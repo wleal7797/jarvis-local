@@ -115,7 +115,7 @@ async def chat_ws(
                 except ConversationNotFoundError:
                     await websocket.send_json({"type": "error", "message": NOT_FOUND})
                     continue
-            events = service.answer(user.id, body.message, body.conversation_id)
+            events = service.answer(user.id, body.message, body.conversation_id, voice=body.voice)
             if body.voice:
                 await stream_with_voice(events, tts, send)
             else:

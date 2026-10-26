@@ -110,7 +110,13 @@ def get_chat_service(
         def retriever_factory(session: AsyncSession) -> RetrievalService:
             return RetrievalService(session, embedder, config)
 
-    return ChatService(factory, llm, settings.ollama_chat_model, retriever_factory)
+    return ChatService(
+        factory,
+        llm,
+        settings.ollama_chat_model,
+        retriever_factory,
+        voice_context_tokens=settings.rag_voice_context_tokens,
+    )
 
 
 async def get_current_user(settings: SettingsDep, session: SessionDep) -> User:

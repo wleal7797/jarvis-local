@@ -23,12 +23,15 @@ from app.models import Conversation, Message, MessageSource
 from app.repositories import ConversationRepository, ModelVersionRepository
 from app.services.embedding_service import EmbeddingError
 from app.services.llm import LLMError, LLMProvider
-from app.services.prompt_builder import build_messages, fit_context
+from app.services.prompt_builder import CONTEXT_TOKEN_BUDGET, build_messages, fit_context
 from app.services.retrieval_service import RetrievedChunk
 
 logger = logging.getLogger(__name__)
 
 HISTORY_MESSAGES = 20
+# Por voz se leen ~2 fragmentos en vez de 3 (cada 250 tokens cuestan ~1 s en la GTX 1650 Ti).
+# Con 900 (1 fragmento) era ~30 % más rápido pero falló respuestas que necesitaban 2.
+VOICE_CONTEXT_TOKENS = 1100
 TITLE_LENGTH = 60
 MODEL_UNAVAILABLE = "JARVIS no pudo responder: el modelo no está disponible."
 CITATION = re.compile(r"\[(\d{1,2})\]")
@@ -52,6 +55,17 @@ class ConversationNotFoundError(LookupError):
 def make_title(text: str) -> str:
     title = " ".join(text.split())
     return title if len(title) <= TITLE_LENGTH else title[: TITLE_LENGTH - 1].rstrip() + "…"
+
+
+_WORD = re.compile(r"[a-záéíóúñü0-9]+", re.IGNORECASE)
+# Saludos y frases cortas no necesitan documentos (leerlos cuesta ~6 s en esta GPU).
+MIN_CONTENT_WORDS_FOR_DOCUMENTS = 4
+
+
+def is_small_talk(text: str) -> bool:
+    """ "Gracias, Jarvis", "¿Cómo estás?", "¿Qué hora es?" → sí. Preguntas con contenido → no."""
+    words = [w for w in _WORD.findall(text.lower()) if len(w) > 2 and w != "jarvis"]
+    return len(words) < MIN_CONTENT_WORDS_FOR_DOCUMENTS
 
 
 def cited_numbers(answer: str, available: int) -> list[int]:
@@ -81,11 +95,13 @@ class ChatService:
         llm: LLMProvider,
         model: str,
         retriever_factory: RetrieverFactory | None = None,
+        voice_context_tokens: int = VOICE_CONTEXT_TOKENS,
     ) -> None:
         self._session_factory = session_factory
         self._llm = llm
         self._model = model
         self._retriever_factory = retriever_factory
+        self._voice_context_tokens = voice_context_tokens
 
     async def ensure_conversation(self, user_id: int, conversation_id: int) -> None:
         """Lanza `ConversationNotFoundError` si no existe o no es de ese usuario."""
@@ -94,8 +110,14 @@ class ChatService:
                 raise ConversationNotFoundError(conversation_id)
 
     async def answer(
-        self, user_id: int, text: str, conversation_id: int | None = None
+        self,
+        user_id: int,
+        text: str,
+        conversation_id: int | None = None,
+        *,
+        voice: bool = False,
     ) -> AsyncIterator[ChatEvent]:
+        """`voice=True`: conversación hablada, se lee menos contexto para responder antes."""
         started = time.perf_counter()
 
         # 1. Guardar la pregunta.
@@ -113,7 +135,12 @@ class ChatService:
         yield {"type": "start", "conversation_id": conversation_id, "message_id": question.id}
 
         # 2. Buscar en los documentos.
-        context = await self._retrieve(text, user_id)
+        # Por voz: menos contexto, y nada de documentos para charla corta (responde antes).
+        if voice and is_small_talk(text):
+            context = []
+        else:
+            budget = self._voice_context_tokens if voice else CONTEXT_TOKEN_BUDGET
+            context = await self._retrieve(text, user_id, budget)
         if context:
             yield {"type": "sources", "sources": source_payload(context)}
 
@@ -178,7 +205,7 @@ class ChatService:
             "cited": cited,
         }
 
-    async def _retrieve(self, text: str, user_id: int) -> list[RetrievedChunk]:
+    async def _retrieve(self, text: str, user_id: int, budget: int) -> list[RetrievedChunk]:
         """Fragmentos relevantes; si la búsqueda falla, JARVIS responde sin ellos."""
         if self._retriever_factory is None:
             return []
@@ -190,7 +217,7 @@ class ChatService:
                 "Búsqueda sin embeddings; se responde sin contexto", extra={"error": str(exc)}
             )
             return []
-        return fit_context(found)
+        return fit_context(found, budget)
 
     async def _get_or_create(
         self, repo: ConversationRepository, user_id: int, conversation_id: int | None, text: str

@@ -5,7 +5,7 @@
 
 > 🚧 **Proyecto en construcción.** Se desarrolla por etapas y cada una queda documentada en `docs/`.
 
-**Estado:** 🟡 Etapa 8 terminada: le hablas y te responde en voz alta
+**Estado:** 🟡 Etapa 9 terminada: micrófono siempre atento; dígale *"Jarvis, …"* y conversa por los parlantes
 
 ## Inicio rápido
 
@@ -101,7 +101,7 @@ flowchart LR
 | 6 | Ingesta de conocimiento externo | ✅ [bitácora](docs/etapas/06-ingesta.md) |
 | 7 | Voz a texto (faster-whisper) | ✅ [bitácora](docs/etapas/07-voz-a-texto.md) |
 | 8 | Texto a voz (Piper) | ✅ [bitácora](docs/etapas/08-texto-a-voz.md) |
-| 9 | "Jarvis" siempre atento + conversación fluida | ⚪ |
+| 9 | "Jarvis" siempre atento + conversación fluida | ✅ [bitácora](docs/etapas/09-jarvis-siempre-atento.md) |
 | 10 | Memoria: recuerda lo que le cuentas | ⚪ |
 | 11 | Seguridad y acceso en la red local | ⚪ |
 | 12 | Fine-tuning con LoRA | ⚪ |

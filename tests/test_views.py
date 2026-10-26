@@ -20,7 +20,7 @@ class StubChatService:
         if conversation_id != 7:
             raise ConversationNotFoundError(conversation_id)
 
-    async def answer(self, user_id: int, text: str, conversation_id: int | None = None):
+    async def answer(self, user_id: int, text: str, conversation_id: int | None = None, **_):
         self.received.append((user_id, text, conversation_id))
         yield {"type": "start", "conversation_id": conversation_id or 7, "message_id": 1}
         yield {"type": "token", "content": "Hola, "}
