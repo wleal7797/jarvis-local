@@ -258,7 +258,7 @@
           }
         }
       } else if (data.type === "audio") {
-        if (window.JarvisSpeaker) window.JarvisSpeaker.enqueue(data.audio);
+        if (window.JarvisSpeaker) window.JarvisSpeaker.enqueue(data.audio, state.forceVoice);
       } else if (data.type === "audio_error") {
         console.warn("Voz no disponible:", data.message);
       } else if (data.type === "token") {
@@ -287,13 +287,15 @@
     addMessage("user", message, options && options.meta);
     if (!state.conversationId) els.title.textContent = message.slice(0, 60);
     if (window.JarvisSpeaker) window.JarvisSpeaker.stop(); // un mensaje nuevo interrumpe la voz
+    state.forceVoice = Boolean(options && options.voice);
     startReply();
     setBusy(true);
     state.ws.send(
       JSON.stringify({
         message: message,
         conversation_id: state.conversationId,
-        voice: Boolean(window.JarvisSpeaker && window.JarvisSpeaker.enabled()),
+        // Si se le habló por voz, responde siempre en voz alta; si se escribió, según el altavoz.
+        voice: Boolean(options && options.voice) || Boolean(window.JarvisSpeaker && window.JarvisSpeaker.enabled()),
       })
     );
     els.input.value = "";

@@ -109,7 +109,7 @@
       }
       showStatus("");
       const meta = "Por voz · transcrito en " + String(body.processing_seconds).replace(".", ",") + " s";
-      if (!window.JarvisChat.send(body.text, { meta: meta })) {
+      if (!window.JarvisChat.send(body.text, { meta: meta, voice: true })) {
         // Si no se pudo enviar (por ejemplo, sin conexión), el texto queda en la caja.
         const input = document.getElementById("input");
         input.value = body.text;
