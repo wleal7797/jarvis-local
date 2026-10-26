@@ -88,6 +88,13 @@
       <div class="messages__list" id="messages-list"></div>
     </section>
 
+    <div class="agent" id="agent-status" role="status" aria-live="polite" hidden>
+      <span class="agent__icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+      </span>
+      <span class="agent__text"></span>
+      <span class="agent__dots" aria-hidden="true"><span></span><span></span><span></span></span>
+    </div>
     <button class="speaking" id="stop-voice" type="button" hidden>
       <span class="speaking__bars" aria-hidden="true"><span></span><span></span><span></span></span>
       JARVIS está hablando · <strong>Detener</strong>
@@ -114,4 +121,5 @@
 <script src="/static/js/chat.js?v={{ v }}"></script>
 <script src="/static/js/voice.js?v={{ v }}"></script>
 <script src="/static/js/voice-settings.js?v={{ v }}"></script>
+<script src="/static/js/agent-status.js?v={{ v }}"></script>
 {% endblock %}

@@ -45,3 +45,7 @@ class LLMProvider(Protocol):
     ) -> AsyncIterator[ChatChunk]:
         """Genera la respuesta pedazo a pedazo (streaming)."""
         ...
+
+    async def warm(self, keep_alive: str = "10m", prefill: bool = False) -> None:
+        """Deja el modelo cargado y listo para responder sin esperar."""
+        ...

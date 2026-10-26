@@ -36,6 +36,10 @@ class FakeLLM:
             done=True, tokens_in=42, tokens_out=len(self.reply.split()), tokens_per_second=40.0
         )
 
+    async def warm(self, keep_alive: str = "10m", prefill: bool = False) -> None:
+        self.warmed = keep_alive
+        self.prefilled = prefill
+
 
 def _words(text: str) -> list[str]:
     plain = unicodedata.normalize("NFKD", text.lower()).encode("ascii", "ignore").decode()

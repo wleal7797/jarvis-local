@@ -28,6 +28,7 @@ from app.core.logging import setup_logging
 from app.core.preferences import load_preferences
 from app.services.stt_service import FasterWhisperSTT, WhisperSettings
 from app.services.tts_service import PiperSettings, PiperTTS
+from app.services.voice_status import VoiceStatusHub
 
 logger = logging.getLogger("jarvis")
 
@@ -43,6 +44,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.stt = FasterWhisperSTT(
         WhisperSettings(
             model=settings.stt_model,
+            device=settings.stt_device,
             language=settings.stt_language,
             threads=settings.stt_threads,
             initial_prompt=settings.stt_initial_prompt,
@@ -59,6 +61,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             idle_unload_seconds=settings.tts_idle_unload_seconds,
         )
     )
+    app.state.voice_status = VoiceStatusHub()
     stt_watcher = asyncio.create_task(app.state.stt.run_idle_watcher())
     tts_watcher = asyncio.create_task(app.state.tts.run_idle_watcher())
     logger.info("JARVIS iniciado", extra={"environment": settings.environment})
@@ -109,6 +112,7 @@ def create_app() -> FastAPI:
     app.include_router(chat_controller.ws_router)
     app.include_router(knowledge_controller.router)
     app.include_router(voice_controller.router)
+    app.include_router(voice_controller.ws_router)
     return app
 
 

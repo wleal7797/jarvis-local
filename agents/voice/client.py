@@ -25,19 +25,22 @@ class JarvisClient:
         except httpx.HTTPError:
             return False
 
-    async def warm_up(self) -> None:
-        """Pide transcribir 1 s de silencio: la API carga Whisper y queda lista."""
-        import io
-        import wave
+    async def warm(self, prefill: bool = False) -> dict[str, bool]:
+        """Pide a la API dejar cargados Whisper, la voz y el modelo de chat."""
+        response = await self._http.post("/api/voice/warm", params={"prefill": prefill})
+        response.raise_for_status()
+        return response.json()
 
-        buffer = io.BytesIO()
-        with wave.open(buffer, "wb") as wav_file:
-            wav_file.setnchannels(1)
-            wav_file.setsampwidth(2)
-            wav_file.setframerate(16000)
-            wav_file.writeframes(b"\x00\x00" * 16000)
+    async def speak(self, text: str) -> bytes:
+        """WAV con la voz de JARVIS (para frases fijas como "Un momento, lo consulto")."""
+        response = await self._http.post("/api/voice/speak", json={"text": text})
+        response.raise_for_status()
+        return response.content
+
+    async def set_status(self, state: str, text: str = "") -> None:
+        """Avisa a la pantalla qué está haciendo el agente (si falla, no importa)."""
         with contextlib.suppress(httpx.HTTPError):
-            await self.transcribe(buffer.getvalue())
+            await self._http.put("/api/voice/agent", json={"state": state, "text": text[:500]})
 
     async def transcribe(self, wav: bytes) -> str:
         response = await self._http.post(

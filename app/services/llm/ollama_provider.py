@@ -51,6 +51,34 @@ class OllamaProvider:
             logger.error("Fallo al hablar con Ollama", extra={"error": str(exc)})
             raise LLMError("No se pudo conectar con Ollama") from exc
 
+    async def warm(self, keep_alive: str = "10m", prefill: bool = False) -> None:
+        """Sin prompt, Ollama sólo carga el modelo (o renueva su tiempo en memoria).
+
+        `prefill`: además lee una vez la personalidad (SYSTEM del Modelfile, ~1000 tokens).
+        Queda en la caché del modelo y la primera pregunta ya no espera ~4 s a leerla.
+        """
+        if prefill:
+            url, payload = (
+                f"{self._base_url}/api/chat",
+                {
+                    "model": self._default_model,
+                    "messages": [{"role": "user", "content": "Hola"}],
+                    "stream": False,
+                    "keep_alive": keep_alive,
+                    "options": {"num_predict": 1},
+                },
+            )
+        else:
+            url, payload = (
+                f"{self._base_url}/api/generate",
+                {"model": self._default_model, "keep_alive": keep_alive},
+            )
+        try:
+            response = await self._http.post(url, json=payload)
+            response.raise_for_status()
+        except httpx.HTTPError as exc:
+            raise LLMError("No se pudo cargar el modelo en Ollama") from exc
+
 
 def _parse_line(line: str) -> ChatChunk:
     data = json.loads(line)

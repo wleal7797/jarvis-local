@@ -160,7 +160,7 @@
 
   function startReply() {
     const reply = addMessage("assistant", "");
-    reply.bubble.innerHTML = '<span class="typing" aria-label="JARVIS está escribiendo"><span></span><span></span><span></span></span>';
+    reply.bubble.innerHTML = '<span class="thinking"><span class="typing" aria-hidden="true"><span></span><span></span><span></span></span>Pensando…</span>';
     state.reply = { el: reply, text: "", frame: null, wakeTimer: null };
     // Si el modelo estaba descargado de la GPU, la primera palabra tarda ~10 s: avisarlo.
     state.reply.wakeTimer = setTimeout(() => {
@@ -245,16 +245,24 @@
         const isNew = state.conversationId !== data.conversation_id;
         state.conversationId = data.conversation_id;
         if (isNew) history.replaceState(null, "", "#c=" + data.conversation_id);
+      } else if (data.type === "searching") {
+        if (state.reply && state.reply.text === "") {
+          clearWakeTimer();
+          state.reply.el.bubble.insertAdjacentHTML(
+            "beforeend",
+            '<span class="waking" data-search>Buscando en sus documentos…</span>'
+          );
+        }
       } else if (data.type === "sources") {
         if (state.reply) {
           state.reply.sources = data.sources;
           if (state.reply.text === "") {
             clearWakeTimer();
             const n = data.sources.length;
-            state.reply.el.bubble.insertAdjacentHTML(
-              "beforeend",
-              '<span class="waking">Consultando ' + n + (n === 1 ? " documento…" : " documentos…") + "</span>"
-            );
+            const label = "Leyendo " + n + (n === 1 ? " documento…" : " documentos…");
+            const line = state.reply.el.bubble.querySelector("[data-search]");
+            if (line) line.textContent = label;
+            else state.reply.el.bubble.insertAdjacentHTML("beforeend", '<span class="waking">' + label + "</span>");
           }
         }
       } else if (data.type === "audio") {
@@ -308,6 +316,7 @@
   window.JarvisChat = {
     send: sendMessage,
     isBusy: () => state.busy || !state.connected,
+    refresh: () => loadConversations(),
   };
 
   // ---------- Conversaciones ----------

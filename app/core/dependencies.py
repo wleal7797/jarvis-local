@@ -26,6 +26,7 @@ from app.services.llm import LLMProvider, OllamaProvider
 from app.services.retrieval_service import RetrievalService, RetrievalSettings
 from app.services.stt_service import SpeechToText
 from app.services.tts_service import TextToSpeech
+from app.services.voice_status import VoiceStatusHub
 
 SettingsDep = Annotated[Settings, Depends(get_settings)]
 
@@ -116,6 +117,7 @@ def get_chat_service(
         settings.ollama_chat_model,
         retriever_factory,
         voice_context_tokens=settings.rag_voice_context_tokens,
+        voice_max_tokens=settings.voice_max_tokens,
     )
 
 
@@ -163,3 +165,12 @@ def get_tts(conn: HTTPConnection) -> TextToSpeech:
 
 
 TextToSpeechDep = Annotated[TextToSpeech, Depends(get_tts)]
+
+
+def get_voice_status(conn: HTTPConnection) -> VoiceStatusHub:
+    """Estado del agente de voz (uno para toda la app, creado en `main.py`)."""
+    return conn.app.state.voice_status
+
+
+VoiceStatusDep = Annotated[VoiceStatusHub, Depends(get_voice_status)]
+LLMDep = Annotated[LLMProvider, Depends(get_llm)]

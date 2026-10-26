@@ -32,6 +32,8 @@ HISTORY_MESSAGES = 20
 # Por voz se leen ~2 fragmentos en vez de 3 (cada 250 tokens cuestan ~1 s en la GTX 1650 Ti).
 # Con 900 (1 fragmento) era ~30 % más rápido pero falló respuestas que necesitaban 2.
 VOICE_CONTEXT_TOKENS = 1100
+# Por voz, una o dos frases: cada token son ~25 ms en la GPU y respuestas largas cansan al oído.
+VOICE_MAX_TOKENS = 200
 TITLE_LENGTH = 60
 MODEL_UNAVAILABLE = "JARVIS no pudo responder: el modelo no está disponible."
 CITATION = re.compile(r"\[(\d{1,2})\]")
@@ -68,6 +70,20 @@ def is_small_talk(text: str) -> bool:
     return len(words) < MIN_CONTENT_WORDS_FOR_DOCUMENTS
 
 
+# Por voz sólo se buscan documentos para preguntas: "Recuérdame comprar leche" o
+# "Me gusta el café" no necesitan buscar (buscar + leer cuesta ~8 s en esta GPU).
+_ASKS = re.compile(
+    r"\?|^\W*(?:jarvis\W+)?(?:qu[eé]|qui[eé]n|cu[aá]l|c[oó]mo|d[oó]nde|cu[aá]ndo|cu[aá]nt|"
+    r"por\s+qu[eé]|expl[ií](?:c|qu)|d[ií]game|dime|cu[eé]nt|h[aá]bl|busc|sabe|sabes)",
+    re.IGNORECASE,
+)
+
+
+def voice_needs_documents(text: str) -> bool:
+    """Por voz: ¿vale la pena buscar en los documentos? Sólo preguntas con contenido."""
+    return not is_small_talk(text) and bool(_ASKS.search(text))
+
+
 def cited_numbers(answer: str, available: int) -> list[int]:
     """Números de fuente que el modelo citó de verdad (ignora los inventados)."""
     found = {int(n) for n in CITATION.findall(answer)}
@@ -96,12 +112,14 @@ class ChatService:
         model: str,
         retriever_factory: RetrieverFactory | None = None,
         voice_context_tokens: int = VOICE_CONTEXT_TOKENS,
+        voice_max_tokens: int = VOICE_MAX_TOKENS,
     ) -> None:
         self._session_factory = session_factory
         self._llm = llm
         self._model = model
         self._retriever_factory = retriever_factory
         self._voice_context_tokens = voice_context_tokens
+        self._voice_max_tokens = voice_max_tokens
 
     async def ensure_conversation(self, user_id: int, conversation_id: int) -> None:
         """Lanza `ConversationNotFoundError` si no existe o no es de ese usuario."""
@@ -136,11 +154,17 @@ class ChatService:
 
         # 2. Buscar en los documentos.
         # Por voz: menos contexto, y nada de documentos para charla corta (responde antes).
-        if voice and is_small_talk(text):
+        retrieval_started = time.perf_counter()
+        if voice and not voice_needs_documents(text):
             context = []
         else:
+            if self._retriever_factory is not None:
+                # Buscar y leer documentos tarda: se avisa para mostrarlo (y decirlo por voz).
+                yield {"type": "searching"}
             budget = self._voice_context_tokens if voice else CONTEXT_TOKEN_BUDGET
             context = await self._retrieve(text, user_id, budget)
+        retrieval_ms = int((time.perf_counter() - retrieval_started) * 1000)
+        first_token_ms: int | None = None
         if context:
             yield {"type": "sources", "sources": source_payload(context)}
 
@@ -149,9 +173,13 @@ class ChatService:
         stats = None
         try:
             async for chunk in self._llm.chat_stream(
-                build_messages(history, text, context), model=self._model
+                build_messages(history, text, context, spoken=voice),
+                model=self._model,
+                options={"num_predict": self._voice_max_tokens} if voice else None,
             ):
                 if chunk.content:
+                    if first_token_ms is None:
+                        first_token_ms = int((time.perf_counter() - started) * 1000)
                     parts.append(chunk.content)
                     yield {"type": "token", "content": chunk.content}
                 if chunk.done:
@@ -189,6 +217,9 @@ class ChatService:
             extra={
                 "conversation_id": conversation_id,
                 "latency_ms": latency_ms,
+                "retrieval_ms": retrieval_ms,
+                "first_token_ms": first_token_ms,
+                "tokens_in": stats.tokens_in if stats else None,
                 "tokens_out": stats.tokens_out if stats else None,
                 "tokens_per_second": stats.tokens_per_second if stats else None,
                 "sources": len(context),

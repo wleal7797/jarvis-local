@@ -4,23 +4,27 @@
     .venv\\Scripts\\python -m agents.voice --dispositivos  # ver micrófonos y parlantes
     .venv\\Scripts\\python -m agents.voice --detector ambos   # también "Jarvis" en inglés
     .venv\\Scripts\\python -m agents.voice --simular a.wav b.wav --mudo   # sin micrófono
+    .venv\\Scripts\\python -m agents.voice --detalle   # ver todo lo que oye (diagnóstico)
 
-Requiere la API encendida (.\\scripts\\jarvis.ps1 iniciar). La frase sólo sale del
-micrófono hacia la API si empieza con "Jarvis" o si están conversando; todo queda en el PC.
+Requiere la API encendida (.\\scripts\\jarvis.ps1 iniciar). Cada frase se transcribe en
+la API (en este mismo PC) y sólo se responde si empieza con "Jarvis" o si están
+conversando; las demás se descartan. Sólo puede correr un agente a la vez.
 """
 
 import argparse
 import asyncio
+import contextlib
 import logging
+import socket
 
 import numpy as np
 
-from agents.voice.agent import VoiceAgent, status
+from agents.voice.agent import SEARCHING_PHRASE, VoiceAgent, status
 from agents.voice.client import JarvisClient
 from agents.voice.conversation import Conversation, ConversationSettings, Mode
 from agents.voice.player import Player
 from agents.voice.segmenter import FRAME_SAMPLES, SAMPLE_RATE, UtteranceSegmenter
-from agents.voice.wake import AnyDetector, OpenWakeWordDetector, WhisperNameDetector
+from agents.voice.wake import OpenWakeWordDetector
 from app.core.config import get_settings
 from app.core.logging import setup_logging
 
@@ -29,14 +33,30 @@ logger = logging.getLogger("jarvis.voz")
 # Mientras él habla, el micrófono oye los parlantes: se exige más certeza de que es voz humana.
 THRESHOLD_IDLE = 0.5
 THRESHOLD_WHILE_SPEAKING = 0.8
+# Cada cuánto se le pide a la API mantener los modelos cargados (se descargan a los 5 min).
+WARM_EVERY_SECONDS = 240
+# Puerto local que sólo sirve de "candado": si ya está ocupado, hay otro agente corriendo.
+SINGLE_INSTANCE_PORT = 8799
 
 
 def build_detector(kind: str):
+    """(detector por audio, ¿buscar también el nombre en la transcripción?)"""
     if kind == "openwakeword":
-        return OpenWakeWordDetector()
+        return OpenWakeWordDetector(), False
     if kind == "ambos":
-        return AnyDetector(OpenWakeWordDetector(), WhisperNameDetector())
-    return WhisperNameDetector()
+        return OpenWakeWordDetector(), True
+    return None, True
+
+
+def single_instance_lock(port: int = SINGLE_INSTANCE_PORT) -> socket.socket | None:
+    """Dos agentes a la vez oyen y responden todo dos veces (y se esperan uno al otro)."""
+    lock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        lock.bind(("127.0.0.1", port))
+    except OSError:
+        lock.close()
+        return None
+    return lock
 
 
 class SilentBackend:
@@ -95,16 +115,37 @@ async def run(args: argparse.Namespace) -> None:
         status("La API no responde. Enciéndela primero: .\\scripts\\jarvis.ps1 iniciar")
         return
 
-    status("Cargando detector de nombre, filtro de voz y Whisper de la API…")
-    # Precarga Whisper small en la API: así la primera frase no espera ~5 s a que cargue.
-    warmup = asyncio.create_task(client.warm_up())
+    status("Cargando filtro de voz y dejando listos Whisper, la voz y el modelo…")
+    # Precarga en la API: así la primera frase no espera a que se carguen los modelos.
+    warmup = asyncio.create_task(client.warm(prefill=True))
     download_models(["hey_jarvis"])  # modelos base de openWakeWord (incluye Silero VAD)
     vad = VAD()
-    detector = await asyncio.to_thread(build_detector, args.detector)
+    detector, name_from_text = await asyncio.to_thread(build_detector, args.detector)
     conversation = Conversation(ConversationSettings(follow_up_seconds=args.seguir))
-    await warmup
+    with contextlib.suppress(Exception):
+        await warmup
+    searching_wav = None
+    with contextlib.suppress(Exception):
+        searching_wav = await client.speak(SEARCHING_PHRASE)
     loop = asyncio.get_running_loop()
     agent: VoiceAgent | None = None
+    background: set[asyncio.Task] = set()
+    last_status = ["en_espera", ""]
+
+    def notify(state: str, text: str = "") -> None:
+        last_status[:] = [state, text]
+        task = loop.create_task(client.set_status(state, text))
+        background.add(task)
+        task.add_done_callback(background.discard)
+
+    async def keep_warm() -> None:
+        while True:
+            await asyncio.sleep(WARM_EVERY_SECONDS)
+            with contextlib.suppress(Exception):
+                await client.warm()
+            # Señal de vida: si deja de llegar (agente cerrado a la fuerza), la pantalla
+            # lo muestra apagado.
+            await client.set_status(*last_status)
 
     def on_idle() -> None:
         if agent is not None:
@@ -115,7 +156,16 @@ async def run(args: argparse.Namespace) -> None:
         output_device=args.parlantes,
         backend=SilentBackend() if args.mudo else None,
     )
-    agent = VoiceAgent(detector, client, player, conversation)
+    agent = VoiceAgent(
+        detector,
+        client,
+        player,
+        conversation,
+        verbose=args.detalle,
+        notify=notify,
+        name_from_text=name_from_text,
+        searching_wav=searching_wav,
+    )
     segmenter = UtteranceSegmenter()
     frames: asyncio.Queue[np.ndarray] = asyncio.Queue(maxsize=500)
 
@@ -134,7 +184,10 @@ async def run(args: argparse.Namespace) -> None:
     def process(frame: np.ndarray) -> None:
         # Mientras él habla, el micrófono oye los parlantes: se exige más certeza de voz.
         segmenter.start_threshold = THRESHOLD_WHILE_SPEAKING if player.playing else THRESHOLD_IDLE
+        was_speaking = segmenter.in_speech
         utterance = segmenter.feed(frame, float(vad.predict(frame)))
+        if args.detalle and segmenter.in_speech and not was_speaking:
+            status("   · oigo voz…")
         if utterance is not None:
             # La respuesta corre aparte: el micrófono sigue escuchando (para poder interrumpir).
             asyncio.create_task(agent.handle(utterance)).add_done_callback(report)
@@ -152,6 +205,18 @@ async def run(args: argparse.Namespace) -> None:
         return
 
     status('Listo. Diga "Jarvis, …" (Ctrl+C para salir).')
+    notify("en_espera")
+    warmer = asyncio.create_task(keep_warm())
+    try:
+        await listen(args, frames, process, conversation, notify, on_audio, sd)
+    finally:
+        warmer.cancel()
+        await client.set_status("apagado")
+        player.close()
+        await client.close()
+
+
+async def listen(args, frames, process, conversation, notify, on_audio, sd) -> None:
     with sd.InputStream(
         samplerate=SAMPLE_RATE,
         channels=1,
@@ -166,6 +231,7 @@ async def run(args: argparse.Namespace) -> None:
             conversation.needs_name()  # actualiza el modo si venció la escucha
             if conversation.mode != last_mode and conversation.mode == Mode.DORMIDO:
                 status('En espera. Diga "Jarvis, …"')
+                notify("en_espera")
             last_mode = conversation.mode
 
 
@@ -185,11 +251,18 @@ def main() -> None:
     )
     parser.add_argument("--simular", nargs="+", help="usar archivos WAV en vez del micrófono")
     parser.add_argument("--mudo", action="store_true", help="no reproducir sonido")
+    parser.add_argument(
+        "--detalle", action="store_true", help="mostrar lo que oye aunque no digan su nombre"
+    )
     args = parser.parse_args()
     if args.dispositivos:
         list_devices()
         return
     setup_logging("WARNING")
+    lock = None if args.simular else single_instance_lock()
+    if lock is None and not args.simular:
+        status("Ya hay un agente de voz encendido. Apáguelo antes de abrir otro.")
+        return
     try:
         asyncio.run(run(args))
     except KeyboardInterrupt:

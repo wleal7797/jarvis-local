@@ -1,8 +1,10 @@
 """Voz a texto con faster-whisper (Whisper optimizado con CTranslate2), 100 % local.
 
 Decisiones (ver docs/etapas/07-voz-a-texto.md):
-- Modelo `small` en CPU, int8: 2,9 % de errores en español contra 18,7 % de `base`.
-  En la GPU sería ~10 veces más rápido, pero la VRAM ya la ocupa el modelo de chat.
+- Modelo `small`: 2,9 % de errores en español contra 18,7 % de `base`.
+- En la GPU (Etapa 9): 0,5 s por frase en vez de ~3 s en la CPU. Ocupa ~350 MB de VRAM y
+  el modelo de chat sigue cabiendo entero. Usa la librería CUDA que ya trae Ollama
+  (`cublas64_12.dll`), así que no hay que instalar nada. Si la GPU falla, vuelve a la CPU.
 - `initial_prompt`: una frase con el vocabulario de la casa ("JARVIS") que guía a Whisper.
 - VAD (Silero, incluido en faster-whisper): ignora los silencios antes y después de hablar.
 - Se carga la primera vez que se usa y se descarga tras unos minutos sin uso (RAM).
@@ -11,6 +13,7 @@ Decisiones (ver docs/etapas/07-voz-a-texto.md):
 import asyncio
 import io
 import logging
+import os
 import re
 import threading
 import time
@@ -46,11 +49,14 @@ class Transcription:
 
 class SpeechToText(Protocol):
     async def transcribe(self, audio: bytes) -> Transcription: ...
+    def warm(self) -> None: ...
 
 
 @dataclass(frozen=True)
 class WhisperSettings:
     model: str = "small"
+    # "auto": GPU si se puede, si no CPU. También "cuda" o "cpu".
+    device: str = "auto"
     language: str = "es"
     threads: int = 4
     compute_type: str = "int8"
@@ -60,12 +66,48 @@ class WhisperSettings:
     idle_unload_seconds: int = 300
 
 
-def _default_factory(cfg: WhisperSettings) -> Any:
+def _ollama_cuda_dir() -> str | None:
+    """Carpeta con las librerías CUDA 12 que instala Ollama (cuBLAS), si existe."""
+    base = os.environ.get("LOCALAPPDATA", "")
+    candidate = os.path.join(base, "Programs", "Ollama", "lib", "ollama", "cuda_v12")
+    return candidate if os.path.isfile(os.path.join(candidate, "cublas64_12.dll")) else None
+
+
+def _load_whisper(cfg: WhisperSettings, device: str) -> Any:
     from faster_whisper import WhisperModel  # importación tardía: tarda ~1 s
 
-    return WhisperModel(
-        cfg.model, device="cpu", compute_type=cfg.compute_type, cpu_threads=cfg.threads
-    )
+    compute_type = "int8_float16" if device == "cuda" else cfg.compute_type
+    kwargs = {"device": device, "compute_type": compute_type, "cpu_threads": cfg.threads}
+    try:  # sin internet: usa el modelo ya descargado
+        return WhisperModel(cfg.model, local_files_only=True, **kwargs)
+    except Exception:  # la primera vez hay que descargarlo
+        return WhisperModel(cfg.model, **kwargs)
+
+
+def _default_factory(cfg: WhisperSettings) -> Any:
+    if cfg.device in ("auto", "cuda"):
+        cuda_dir = _ollama_cuda_dir()
+        if cuda_dir and hasattr(os, "add_dll_directory"):
+            os.add_dll_directory(cuda_dir)
+            os.environ["PATH"] = cuda_dir + os.pathsep + os.environ.get("PATH", "")
+        try:
+            model = _load_whisper(cfg, "cuda")
+            # La librería CUDA se carga al transcribir: se prueba con medio segundo de silencio.
+            segments, _ = model.transcribe(_silence(0.5), language=cfg.language)
+            list(segments)
+            logger.info("Whisper en la GPU", extra={"model": cfg.model})
+            return model
+        except Exception as exc:
+            if cfg.device == "cuda":
+                raise
+            logger.warning("Whisper no pudo usar la GPU; usa la CPU", extra={"error": str(exc)})
+    return _load_whisper(cfg, "cpu")
+
+
+def _silence(seconds: float) -> Any:
+    import numpy as np
+
+    return np.zeros(int(16000 * seconds), dtype=np.float32)
 
 
 class FasterWhisperSTT:
@@ -129,6 +171,14 @@ class FasterWhisperSTT:
                 },
             )
             return result
+
+    def warm(self) -> None:
+        """Carga el modelo si hace falta y reinicia la cuenta de inactividad."""
+        with self._lock:
+            if self._model is None:
+                logger.info("cargando Whisper", extra={"model": self._cfg.model})
+                self._model = self._factory(self._cfg)
+            self._last_used = time.monotonic()
 
     def unload_if_idle(self) -> bool:
         """Libera la RAM del modelo si no se usa hace `idle_unload_seconds`."""

@@ -1,6 +1,6 @@
 # Bitácora · Etapa 9: "Jarvis" siempre atento y conversación fluida
 
-**Fecha:** 2026‑10‑25 · **Rama:** `etapa/09-jarvis-siempre-atento` · **Tecnología:** Silero VAD · Whisper `base` (nombre) + `small` (frase) · openWakeWord (opcional) · sounddevice
+**Fecha:** 2026‑10‑25 · **Rama:** `etapa/09-jarvis-siempre-atento` · **Tecnología:** Silero VAD · Whisper `small` en la GPU · openWakeWord (opcional) · sounddevice
 
 ## Objetivo
 Hablarle sin tocar nada: *"Jarvis, ¿cómo estás?"* y responde por los parlantes. Seguir conversando sin repetir su nombre, e interrumpirlo si hace falta.
@@ -31,14 +31,17 @@ Le sigo escuchando 8 s…
 ```
 agents/voice/
 ├── segmenter.py      # corta el micrófono en frases (Silero VAD, 0,3 s previos, 0,7 s de silencio)
-├── wake.py           # ¿empieza con "Jarvis"? WhisperNameDetector · OpenWakeWordDetector · AnyDetector
+├── wake.py           # ¿empieza con "Jarvis"? en la transcripción · OpenWakeWordDetector (inglés)
 ├── conversation.py   # DORMIDO → ATENDIENDO → HABLANDO → ESCUCHANDO (8 s) · eco · sesión de 5 min
 ├── player.py         # parlantes en un hilo aparte, frase por frase, se calla al instante
 ├── client.py         # API: transcribir (small) y chat por WebSocket con voz
 ├── agent.py          # une todo; mide el tiempo de cada paso
 └── __main__.py       # python -m agents.voice [--detector …] [--simular a.wav …] [--mudo]
 app/services/chat_service.py   # por voz: menos contexto y sin documentos para charla corta
-tests/test_voice_agent.py      # 21 pruebas sin micrófono ni parlantes
+tests/test_voice_agent.py      # pruebas del agente sin micrófono ni parlantes
+tests/test_voice_status.py     # estado en pantalla, precarga, respuestas cortas, Whisper GPU/CPU
+app/services/voice_status.py   # qué hace el agente → navegador (WebSocket)
+app/views/static/js/agent-status.js  # el aviso "Pensando…" arriba del chat
 ```
 
 ```mermaid
@@ -92,6 +95,33 @@ Qué se hizo:
 
 El límite es el hardware: la CPU transcribe y la GPU lee el contexto lento. Con 16 GB de RAM se podría dejar `bge-m3` siempre cargado y usar Whisper en la GPU.
 
+## Segunda ronda: más ágil y con aviso de "pensando"
+
+Al probarlo con el micrófono real, "Jarvis, buenos días" tardó **53 s** en responder. Causas y arreglos:
+
+| Causa | Arreglo |
+|---|---|
+| **Dos agentes encendidos** (uno de `jarvis.ps1` y otro abierto a mano): cada frase se transcribía y respondía dos veces, y uno esperaba al otro | El agente usa un "candado" (puerto local 8799): si ya hay uno, el segundo no arranca |
+| Whisper `small` en la CPU: ~3 s por frase, y otro Whisper `base` sólo para el nombre (1,7 s) | **Whisper en la GPU** (0,5 s, ~350 MB de VRAM; el modelo de chat sigue 100 % en la GPU) con la librería CUDA que ya trae Ollama. **Una sola transcripción** sirve para el nombre y para la pregunta |
+| Los modelos se descargaban tras 5 min sin uso y la primera respuesta los esperaba | El agente pide a la API mantenerlos cargados (`POST /api/voice/warm`) al arrancar y cada 4 min |
+| La personalidad (~700 tokens) se leía en cada conversación nueva (~4 s) | Al arrancar se lee una vez y queda en la caché del modelo |
+| Respuestas habladas largas | Por voz: "una o dos frases" y tope de 200 tokens |
+| Buscaba documentos para órdenes como "Recuérdame comprar leche" | Por voz sólo buscan las **preguntas** (`voice_needs_documents`) |
+
+**Se ve y se oye que está pensando:**
+- En el navegador, arriba del cuadro de texto: *Micrófono atento · Le escucho… · Pensando · «su frase» · Consultando sus documentos · Hablando · Le sigo escuchando…* (WebSocket `/ws/voice-status`).
+- Cuando tiene que buscar en documentos (lo más lento), dice de inmediato **"Un momento, lo consulto."**
+- En el chat escrito, la burbuja muestra *Pensando…* y luego *Buscando en sus documentos… → Leyendo 2 documentos…*
+
+| Frase (desde que deja de hablar hasta que empieza a responder) | Antes | Ahora |
+|---|---|---|
+| "Jarvis, buenos días" (micrófono real, con dos agentes) | 53 s | — |
+| "Jarvis, ¿cómo estás?" | 6,1 s | **1,9 s** |
+| "Hola Jarvis, ¿qué hora es?" | 6–10 s | **1,4 s** |
+| "¿Quién escribió Cien años de soledad?" (con documentos) | 15,8 s sin aviso | "Un momento, lo consulto" al instante; respuesta a los ~14 s |
+
+Lo que falta para las preguntas con documentos es hardware: la GTX 1650 Ti lee ~200 tokens/s y dos fragmentos son ~1300 tokens (~6,5 s), más ~2–4 s para cargar `bge-m3` en la CPU si estaba dormido. Se probó `num_batch` 256 y 1024: ambos más lentos que el valor por defecto.
+
 ## Pruebas
 
 **Simulación de punta a punta** (`--simular … --mudo`): los audios entran como si fueran el micrófono, y todo lo demás es real.
@@ -105,7 +135,7 @@ El límite es el hardware: la CPU transcribe y la GPU lee el contexto lento. Con
 
 **Micrófono real:** el agente arranca con `jarvis.ps1 iniciar` y queda "En espera". La prueba hablando en la casa la hace el dueño.
 
-`pytest`: **156 pruebas** (21 del agente: segmentador, detector, estados, eco, interrupción, reproductor) · `ruff` sin errores.
+`pytest`: **175 pruebas** (22 del agente: segmentador, nombre, estados, eco, interrupción, frase de espera, un solo agente; 8 del aviso en pantalla y la precarga) · `ruff` sin errores.
 
 ## Problemas encontrados
 
