@@ -158,7 +158,7 @@ async def warm(
 
 
 @router.get("/agent", response_model=AgentStatusOut, summary="Qué está haciendo el agente de voz")
-async def get_agent_status(user: CurrentUserDep, hub: VoiceStatusDep):
+async def get_agent_status(user: OwnerDep, hub: VoiceStatusDep):
     return AgentStatusOut(**hub.current.as_dict())
 
 
@@ -172,10 +172,9 @@ async def put_agent_status(body: AgentStatusIn, user: OwnerDep, hub: VoiceStatus
 
 
 @ws_router.websocket("/ws/voice-status")
-async def voice_status_socket(
-    websocket: WebSocket, user: CurrentUserDep, hub: VoiceStatusDep
-) -> None:
-    """Empuja al navegador cada cambio de estado del agente de voz."""
+async def voice_status_socket(websocket: WebSocket, user: OwnerDep, hub: VoiceStatusDep) -> None:
+    """Empuja al navegador cada cambio de estado del agente de voz. Sólo al dueño: el aviso
+    incluye lo que se dijo por el micrófono del PC, y eso no lo ve nadie más."""
     await websocket.accept()
     queue = hub.subscribe()
     try:

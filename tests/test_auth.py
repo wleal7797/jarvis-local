@@ -88,7 +88,7 @@ async def test_sin_sesion_todo_lleva_a_entrar(app_session_factory, auth):
         page = await client.get("/memoria")
         assert page.status_code == 303 and page.headers["location"] == "/login?next=/memoria"
         assert (await client.get("/login")).status_code == 200
-        assert (await client.get("/api/conversations")).status_code == 401
+        assert (await client.get("/api/memories")).status_code == 401
         assert (await client.get("/api/memories")).status_code == 401
 
 
@@ -110,7 +110,7 @@ async def test_entrar_salir_y_limite_de_intentos(app_session_factory, auth):
         await setup_owner(client)
         await client.post("/api/auth/logout")
         client.cookies.clear()
-        assert (await client.get("/api/conversations")).status_code == 401
+        assert (await client.get("/api/memories")).status_code == 401
 
         bad = {"username": "dueno", "password": "equivocada"}
         for _ in range(4):
@@ -123,7 +123,7 @@ async def test_entrar_salir_y_limite_de_intentos(app_session_factory, auth):
 
         auth._failures.clear()  # pasaron los 5 minutos
         assert (await client.post("/api/auth/login", json=good)).status_code == 200
-        assert (await client.get("/api/conversations")).status_code == 200
+        assert (await client.get("/api/memories")).status_code == 200
 
 
 @pytest.mark.db
@@ -150,6 +150,9 @@ async def test_roles_dueno_familia_e_invitado(app_session_factory, auth):
         assert (await member.get("/api/memories")).status_code == 200
         assert (await member.get("/api/users")).status_code == 403  # sólo el dueño
         assert (await member.get("/usuarios")).headers["location"] == "/"
+        # Lo que el dueño dice por el micrófono del PC no lo ve nadie más.
+        assert (await member.get("/api/voice/agent")).status_code == 403
+        assert "agent-status.js" not in (await member.get("/")).text
         chat = await member.post("/api/chat", json={"message": "Me gusta el té verde."})
         assert "memory" in [json.loads(line)["type"] for line in chat.text.splitlines()]
 
@@ -178,7 +181,7 @@ async def test_desactivar_a_alguien_lo_saca(app_session_factory, auth):
             login = {"username": "ana", "password": "clave-larga-1"}
             assert (await ana.post("/api/auth/login", json=login)).status_code == 200
             await owner.patch(f"/api/users/{user_id}", json={"is_active": False})
-            assert (await ana.get("/api/conversations")).status_code == 401
+            assert (await ana.get("/api/memories")).status_code == 401
             assert (await ana.post("/api/auth/login", json=login)).status_code == 401
 
 
@@ -186,9 +189,9 @@ async def test_desactivar_a_alguien_lo_saca(app_session_factory, auth):
 async def test_el_agente_de_voz_entra_con_su_token(app_session_factory, auth):
     async with make_client(app_session_factory, auth) as client:
         headers = {"Authorization": f"Bearer {AGENT_TOKEN}"}
-        assert (await client.get("/api/conversations", headers=headers)).status_code == 200
+        assert (await client.get("/api/memories", headers=headers)).status_code == 200
         wrong = {"Authorization": "Bearer otro-token"}
-        assert (await client.get("/api/conversations", headers=wrong)).status_code == 401
+        assert (await client.get("/api/memories", headers=wrong)).status_code == 401
 
 
 @pytest.mark.db

@@ -139,3 +139,14 @@ Ver [10-evaluacion-memoria.md](10-evaluacion-memoria.md): **10/10 datos guardado
 
 ## Siguiente etapa
 **Etapa 11:** seguridad y acceso desde la red local (HTTPS, inicio de sesión y entrar desde el celular).
+
+## Cambio posterior: sin historial visible (27‑oct‑2026)
+
+A pedido del dueño, **el chat sólo muestra la sesión de ahora**: al salir, recargar o entrar desde otro dispositivo, empieza vacío. Lo importante queda en la **memoria** de JARVIS, que es lo que usa para recordar.
+
+- Se quitó la lista de conversaciones del menú lateral y el `#c=ID` de la dirección.
+- Se quitaron `GET /api/conversations`, `GET /api/conversations/{id}/messages` y `DELETE /api/conversations/{id}`: **ninguna petición devuelve conversaciones viejas**.
+- Las conversaciones siguen guardadas en la base, sólo para aprender (memoria, calificaciones 👍/👎, ejemplos de entrenamiento). Nadie las puede abrir.
+- **Aislamiento:** cada usuario sólo ve su propia sesión. El aviso del agente de voz (que muestra lo que se dijo por el micrófono del PC) ahora sólo lo recibe el **dueño**.
+- Pruebas: `test_no_hay_forma_de_ver_conversaciones_viejas` y, en `test_auth.py`, que un familiar no recibe el aviso de voz.
+- El panel **Memoria** sigue disponible para ver, corregir u olvidar lo que JARVIS recuerda.

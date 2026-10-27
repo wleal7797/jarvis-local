@@ -117,31 +117,47 @@ async def test_post_chat_transmite_ndjson(client: httpx.AsyncClient):
         assert response.headers["content-type"].startswith("application/x-ndjson")
         assert events[0]["type"] == "start" and events[-1]["type"] == "end"
 
+        # Se puede seguir la misma conversación mientras dure la sesión.
         conversation_id = events[0]["conversation_id"]
-        conversations = (await client.get("/api/conversations")).json()
-        assert conversations[0]["id"] == conversation_id
-        assert conversations[0]["title"] == "Hola"
-
-        messages = (await client.get(f"/api/conversations/{conversation_id}/messages")).json()
-        assert [m["role"] for m in messages] == ["user", "assistant"]
+        again = await client.post(
+            "/api/chat", json={"message": "¿Sigues ahí?", "conversation_id": conversation_id}
+        )
+        assert json.loads(again.text.splitlines()[0])["conversation_id"] == conversation_id
 
 
 async def test_conversacion_inexistente_da_404(client: httpx.AsyncClient):
     async with client:
         response = await client.post("/api/chat", json={"message": "Hola", "conversation_id": 999})
         assert response.status_code == 404
-        assert (await client.get("/api/conversations/999/messages")).status_code == 404
 
 
-async def test_borrar_conversacion(client: httpx.AsyncClient):
+async def test_no_hay_forma_de_ver_conversaciones_viejas(
+    client: httpx.AsyncClient, app_session_factory
+):
+    """A pedido del dueño: sólo se ve la sesión de ahora. Las conversaciones quedan
+    guardadas (memoria y calificaciones) pero ninguna petición las devuelve."""
     async with client:
-        response = await client.post("/api/chat", json={"message": "Borrar esto"})
+        response = await client.post("/api/chat", json={"message": "Algo privado"})
         conversation_id = json.loads(response.text.splitlines()[0])["conversation_id"]
 
-        assert (await client.delete(f"/api/conversations/{conversation_id}")).status_code == 204
-        assert (
-            await client.get(f"/api/conversations/{conversation_id}/messages")
-        ).status_code == 404
+        for path in (
+            "/api/conversations",
+            f"/api/conversations/{conversation_id}",
+            f"/api/conversations/{conversation_id}/messages",
+        ):
+            assert (await client.get(path)).status_code in (404, 405), path
+        assert (await client.delete(f"/api/conversations/{conversation_id}")).status_code in (
+            404,
+            405,
+        )
+        page = (await client.get("/")).text
+        assert "conversations-list" not in page and "Sólo ve la conversación de ahora" in page
+
+    async with app_session_factory() as session:  # pero sigue guardada para aprender
+        stored = (
+            await session.scalars(select(Message).where(Message.conversation_id == conversation_id))
+        ).all()
+        assert [m.role for m in stored] == ["user", "assistant"]
 
 
 async def test_mensaje_vacio_es_rechazado(client: httpx.AsyncClient):

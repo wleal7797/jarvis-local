@@ -1,9 +1,10 @@
 /* Chat en vivo de JARVIS.
  *
  * - Envía los mensajes por WebSocket (/ws/chat) y pinta la respuesta palabra por palabra.
- * - Lista, abre y borra conversaciones con la API REST (/api/conversations).
+ * - Sólo muestra la sesión de ahora: al salir o recargar la página, empieza vacío.
+ *   Las conversaciones viejas no se pueden ver (ni aquí ni por la API); JARVIS recuerda
+ *   lo importante en su memoria (Etapa 10).
  * - Revisa cada 30 s el estado de Ollama y PostgreSQL (/health).
- * - Recuerda la conversación abierta en la URL (#c=ID) y el tema en localStorage.
  */
 (function () {
   "use strict";
@@ -14,8 +15,6 @@
     scrim: $("scrim"),
     openSidebar: $("open-sidebar"),
     newChat: $("new-chat"),
-    list: $("conversations-list"),
-    listEmpty: $("conversations-empty"),
     title: $("chat-title"),
     status: $("status"),
     toggleTheme: $("toggle-theme"),
@@ -206,7 +205,6 @@
     state.lastReply = state.reply.el; // aquí llega la nota "Lo recordaré" si aprende algo
     state.reply = null;
     setBusy(false);
-    loadConversations();
   }
 
   function failReply(message) {
@@ -244,9 +242,8 @@
     ws.addEventListener("message", (event) => {
       const data = JSON.parse(event.data);
       if (data.type === "start") {
-        const isNew = state.conversationId !== data.conversation_id;
+        // Sólo vive en esta página: al recargar, la sesión empieza de cero.
         state.conversationId = data.conversation_id;
-        if (isNew) history.replaceState(null, "", "#c=" + data.conversation_id);
       } else if (data.type === "searching") {
         if (state.reply && state.reply.text === "") {
           clearWakeTimer();
@@ -329,98 +326,19 @@
   window.JarvisChat = {
     send: sendMessage,
     isBusy: () => state.busy || !state.connected,
-    refresh: () => loadConversations(),
+    refresh: () => {}, // ya no hay lista de conversaciones que actualizar
   };
 
-  // ---------- Conversaciones ----------
-
-  async function loadConversations() {
-    try {
-      const response = await fetch("/api/conversations");
-      if (!response.ok) throw new Error(response.status);
-      renderConversations(await response.json());
-    } catch (_) {
-      els.listEmpty.textContent = "No se pudo cargar el historial.";
-      els.listEmpty.hidden = false;
-    }
-  }
-
-  function renderConversations(items) {
-    els.list.replaceChildren();
-    els.listEmpty.hidden = items.length > 0;
-    els.listEmpty.textContent = "Aún no hay conversaciones.";
-    items.forEach((conv) => {
-      const li = document.createElement("li");
-      li.className = "conv";
-      if (conv.id === state.conversationId) {
-        li.setAttribute("aria-current", "true");
-        if (conv.title) els.title.textContent = conv.title;
-      }
-
-      const open = document.createElement("button");
-      open.type = "button";
-      open.className = "conv__open";
-      open.textContent = conv.title || "Sin título";
-      open.title = conv.title || "";
-      open.addEventListener("click", () => openConversation(conv.id, conv.title));
-
-      const del = document.createElement("button");
-      del.type = "button";
-      del.className = "conv__delete";
-      del.setAttribute("aria-label", "Borrar conversación: " + (conv.title || ""));
-      del.innerHTML = '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>';
-      del.addEventListener("click", () => deleteConversation(conv.id, conv.title));
-
-      li.append(open, del);
-      els.list.appendChild(li);
-    });
-  }
-
-  async function openConversation(id, title) {
-    if (state.busy) return;
-    closeSidebar();
-    try {
-      const response = await fetch("/api/conversations/" + id + "/messages");
-      if (!response.ok) throw new Error(response.status);
-      const messages = await response.json();
-      state.conversationId = id;
-      history.replaceState(null, "", "#c=" + id);
-      els.title.textContent = title || "Conversación";
-      els.messagesList.replaceChildren();
-      setWelcome(messages.length === 0);
-      messages.forEach((m) => {
-        const meta = m.role === "assistant" ? formatMeta({ latency_ms: m.latency_ms }) : "";
-        const added = addMessage(m.role === "user" ? "user" : "assistant", m.content, meta);
-        if (m.role === "assistant") {
-          addListenButton(added, m.content);
-          if (window.JarvisFeedback) window.JarvisFeedback.attach(added, m.id, m.rating);
-          renderSources(added.wrap, m.sources, m.content);
-        }
-      });
-      scrollToBottom(true);
-      loadConversations();
-    } catch (_) {
-      newConversation();
-    }
-  }
-
-  async function deleteConversation(id, title) {
-    if (!confirm('¿Borrar la conversación "' + (title || "Sin título") + '"? No se puede deshacer.')) return;
-    const response = await fetch("/api/conversations/" + id, { method: "DELETE" });
-    if (response.ok && id === state.conversationId) newConversation();
-    loadConversations();
-  }
+  // ---------- Sesión ----------
 
   function newConversation() {
     if (state.busy) return;
     state.conversationId = null;
-    history.replaceState(null, "", location.pathname);
     els.title.textContent = "Nueva conversación";
     els.messagesList.replaceChildren();
     els.greeting.textContent = greetingForNow();
     setWelcome(true);
     closeSidebar();
-    loadConversations();
     els.input.focus();
   }
 
@@ -506,10 +424,7 @@
 
   els.greeting.textContent = greetingForNow();
   connect();
-  loadConversations();
   setInterval(checkHealth, 30000);
-
-  const match = location.hash.match(/^#c=(\d+)$/);
-  if (match) openConversation(Number(match[1]), "");
+  if (location.hash) history.replaceState(null, "", location.pathname); // enlaces viejos (#c=…)
   els.input.focus();
 })();

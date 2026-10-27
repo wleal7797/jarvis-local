@@ -283,11 +283,11 @@ async def test_endpoints_de_memoria(client: httpx.AsyncClient):
 
 
 @pytest.mark.db
-async def test_endpoint_de_calificacion_y_el_historial_la_muestra(client: httpx.AsyncClient):
+async def test_endpoint_de_calificacion(client: httpx.AsyncClient):
     async with client:
         response = await client.post("/api/chat", json={"message": "Hola"})
         events = [json.loads(line) for line in response.text.splitlines()]
-        conversation_id, reply_id = events[0]["conversation_id"], events[-1]["message_id"]
+        reply_id = events[-1]["message_id"]
 
         rated = await client.put(f"/api/messages/{reply_id}/feedback", json={"rating": -1})
         assert rated.status_code == 200 and rated.json()["rating"] == -1
@@ -295,9 +295,6 @@ async def test_endpoint_de_calificacion_y_el_historial_la_muestra(client: httpx.
         assert bad.status_code == 422
         missing = await client.put("/api/messages/99999/feedback", json={"rating": 1})
         assert missing.status_code == 404
-
-        messages = (await client.get(f"/api/conversations/{conversation_id}/messages")).json()
-        assert [m["rating"] for m in messages] == [None, -1]
 
 
 @pytest.mark.db
