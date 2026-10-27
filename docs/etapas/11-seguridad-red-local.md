@@ -84,6 +84,7 @@ El resto de las pruebas corre con `AUTH_ENABLED=false` (como el dueño), igual q
 | El vencimiento de la sesión no se podía probar | PyJWT revisa `exp` con el reloj del sistema | Se revisa con el reloj del servicio (inyectable en las pruebas) |
 | Las pruebas viejas fallaban sin `role` | Simulaban al usuario sólo con `id` | `as_owner(app)` en `tests/fakes.py` |
 | `app/core/secrets.py` se confundía con el módulo `secrets` de Python | Mismo nombre | Se llama `keys.py` |
+| `jarvis.ps1` no encontraba Caddy recién instalado | winget no creó el atajo en `WinGet\Links`; el programa quedó en `WinGet\Packages\CaddyServer.Caddy_*` | `Get-CaddyExe` también lo busca ahí |
 | **Se desconectó de la base de datos y JARVIS quedó "Hablando"** (`QueuePool limit of size 5 overflow 5 reached`) | Para saber quién es el usuario, cada WebSocket (chat y estado del agente) abría una conexión a la base y la **dejaba ocupada mientras la página estuviera abierta** (`idle in transaction`). Cada pestaña gastaba 2 de las 10; al recargar varias veces se acabaron, y desde ahí fallaron transcribir, chatear y avisar el estado: el agente quedó esperando y la pantalla mostrando "Hablando" | Saber quién es el usuario usa una sesión corta (se abre, consulta y se cierra). Además: `pool_timeout` de 10 s (falla rápido en vez de colgar 30 s), el agente deja de esperar a los 90 s sin respuesta, y una prueba (`test_los_websocket_no_ocupan_conexiones`). Verificado: 12 WebSocket abiertos → 0 conexiones trabadas y la API responde |
 
 ## Límites conocidos
