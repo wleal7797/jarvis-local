@@ -38,7 +38,8 @@ async def certificate() -> Response:
     path = caddy_root_certificate()
     if not path.exists():
         return PlainTextResponse(
-            "Todavía no hay certificado: encienda JARVIS con Caddy (.\scripts\jarvis.ps1 iniciar).",
+            "Todavía no hay certificado: encienda JARVIS con Caddy "
+            "(.\\scripts\\jarvis.ps1 iniciar).",
             status_code=404,
         )
     return FileResponse(path, media_type="application/x-x509-ca-cert", filename="jarvis-ca.crt")

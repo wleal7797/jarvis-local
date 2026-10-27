@@ -11,7 +11,7 @@ from typing import Any
 
 import httpx
 
-from app.services.llm.base import ChatChunk, ChatMessage, LLMError
+from app.services.llm.base import ChatChunk, ChatMessage, LLMError, ToolDecision
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ class OllamaProvider:
     ) -> AsyncIterator[ChatChunk]:
         payload: dict[str, Any] = {
             "model": model or self._default_model,
-            "messages": [{"role": m.role, "content": m.content} for m in messages],
+            "messages": [m.to_ollama() for m in messages],
             "stream": True,
         }
         if options:
@@ -61,7 +61,7 @@ class OllamaProvider:
     ) -> str:
         payload: dict[str, Any] = {
             "model": model or self._default_model,
-            "messages": [{"role": m.role, "content": m.content} for m in messages],
+            "messages": [m.to_ollama() for m in messages],
             "stream": False,
         }
         if options:
@@ -75,6 +75,34 @@ class OllamaProvider:
         if response.status_code != 200:
             raise LLMError(f"Ollama respondió {response.status_code}: {response.text}")
         return response.json().get("message", {}).get("content", "")
+
+    async def decide(
+        self,
+        messages: list[ChatMessage],
+        tools: list[dict[str, Any]],
+        *,
+        model: str | None = None,
+        options: dict[str, Any] | None = None,
+    ) -> ToolDecision:
+        payload: dict[str, Any] = {
+            "model": model or self._default_model,
+            "messages": [m.to_ollama() for m in messages],
+            "tools": tools,
+            "stream": False,
+        }
+        if options:
+            payload["options"] = options
+        try:
+            response = await self._http.post(f"{self._base_url}/api/chat", json=payload)
+        except httpx.HTTPError as exc:
+            raise LLMError("No se pudo conectar con Ollama") from exc
+        if response.status_code != 200:
+            raise LLMError(f"Ollama respondió {response.status_code}: {response.text}")
+        message = response.json().get("message", {})
+        return ToolDecision(
+            content=message.get("content", ""),
+            tool_calls=tuple(message.get("tool_calls") or ()),
+        )
 
     async def warm(self, keep_alive: str = "10m", prefill: bool = False) -> None:
         """Sin prompt, Ollama sólo carga el modelo (o renueva su tiempo en memoria).

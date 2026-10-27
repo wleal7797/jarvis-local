@@ -49,6 +49,13 @@ class Settings(BaseSettings):
     memory_enabled: bool = True
     memory_token_budget: int = 500
 
+    # Herramientas (Etapa 13): recordatorios, estado del PC, buscar en archivos, hora.
+    tools_enabled: bool = True
+    # Copias de seguridad automáticas de la base (una al día, se guardan las últimas 7).
+    backup_enabled: bool = True
+    backup_keep: int = 7
+    backup_dir: str = "backups"
+
     # Voz a texto (Etapa 7)
     stt_model: str = "small"
     # "auto": GPU si se puede (0,5 s por frase), si no CPU (~3 s). También "cuda" o "cpu".

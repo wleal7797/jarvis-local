@@ -9,16 +9,23 @@ from typing import Any
 
 from app.models import EMBEDDING_DIM
 from app.services.embedding_service import EmbeddingError
-from app.services.llm import ChatChunk, ChatMessage, LLMError
+from app.services.llm import ChatChunk, ChatMessage, LLMError, ToolDecision
 
 
 class FakeLLM:
     """Responde siempre `reply`, pedazo a pedazo, y recuerda lo que recibió."""
 
-    def __init__(self, reply: str = "Hola, soy JARVIS.", fail: bool = False) -> None:
+    def __init__(
+        self,
+        reply: str = "Hola, soy JARVIS.",
+        fail: bool = False,
+        tool_calls: list[dict] | None = None,
+    ) -> None:
         self.reply = reply
         self.fail = fail
         self.calls: list[list[ChatMessage]] = []
+        self.tool_calls = tool_calls or []  # lo que "decide" la primera vez
+        self.offered_tools: list[list[dict]] = []
 
     async def chat_stream(
         self,
@@ -48,6 +55,12 @@ class FakeLLM:
         if self.fail:
             raise LLMError("Ollama apagado")
         return self.reply
+
+    async def decide(self, messages, tools, *, model=None, options=None) -> ToolDecision:
+        self.calls.append(messages)
+        self.offered_tools.append(tools)
+        calls, self.tool_calls = self.tool_calls, []  # sólo la primera vez
+        return ToolDecision(content="" if calls else self.reply, tool_calls=tuple(calls))
 
     async def warm(self, keep_alive: str = "10m", prefill: bool = False) -> None:
         self.warmed = keep_alive

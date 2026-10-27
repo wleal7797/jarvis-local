@@ -244,6 +244,23 @@
       if (data.type === "start") {
         // Sólo vive en esta página: al recargar, la sesión empieza de cero.
         state.conversationId = data.conversation_id;
+      } else if (data.type === "tool") {
+        // Etapa 13: JARVIS está usando una herramienta (recordatorios, estado del PC…).
+        const labels = {
+          crear_recordatorio: "Programando el recordatorio…",
+          listar_recordatorios: "Revisando sus recordatorios…",
+          borrar_recordatorio: "Cancelando el recordatorio…",
+          estado_del_sistema: "Revisando el computador…",
+          buscar_en_mis_archivos: "Buscando en sus archivos…",
+          fecha_y_hora: "Mirando el reloj…",
+        };
+        if (state.reply && state.reply.text === "") {
+          clearWakeTimer();
+          state.reply.el.bubble.insertAdjacentHTML(
+            "beforeend",
+            '<span class="waking">' + (labels[data.name] || "Usando una herramienta…") + "</span>"
+          );
+        }
       } else if (data.type === "searching") {
         if (state.reply && state.reply.text === "") {
           clearWakeTimer();

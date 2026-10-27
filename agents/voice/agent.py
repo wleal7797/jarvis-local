@@ -210,6 +210,23 @@ class VoiceAgent:
         if seconds > 0:
             status(f"Le sigo escuchando {seconds:.0f} s…")
 
+    async def say_notice(self, notice: dict) -> None:
+        """Dice en voz alta un aviso (recordatorio). Si está respondiendo algo, va después."""
+        text = notice.get("say") or notice.get("text") or ""
+        if not text:
+            return
+        status(f"Aviso: {text}")
+        try:
+            wav = await self.client.speak(text)  # type: ignore[attr-defined]
+        except Exception as exc:
+            logger.warning("no se pudo decir el aviso", extra={"error": str(exc)})
+            self.player.chime()
+            return
+        self.player.chime()
+        self.conversation.speaking(text)  # su propia voz no lo despierta (eco)
+        self.player.enqueue(wav, text)
+        self.notify("hablando", text)
+
     def check_stuck(self, now: float | None = None, after_seconds: float = 3.0) -> bool:
         """Vigilante: si dice "hablando" o "atendiendo" pero ya no suena nada ni está
         respondiendo hace más de 3 s, vuelve a "en espera". El bucle del micrófono lo llama

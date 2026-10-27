@@ -8,6 +8,7 @@ from app.models.base import EMBEDDING_DIM, Base
 from app.models.conversation import Conversation, Feedback, Message, MessageSource
 from app.models.knowledge import Chunk, Document, IngestionJob, Source
 from app.models.memory import Memory
+from app.models.reminder import Reminder
 from app.models.training import ModelVersion, TrainingDataset, TrainingExample, TrainingJob
 from app.models.user import User
 
@@ -23,6 +24,7 @@ __all__ = [
     "Message",
     "MessageSource",
     "ModelVersion",
+    "Reminder",
     "Source",
     "TrainingDataset",
     "TrainingExample",

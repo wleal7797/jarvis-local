@@ -43,12 +43,12 @@ def test_argon2_guarda_la_contraseña_cifrada():
 
 def test_la_sesion_firmada_no_se_puede_falsificar_y_vence():
     now = [1_000_000.0]
-    auth = AuthService(None, "secreto", session_days=1, clock=lambda: now[0])  # type: ignore[arg-type]
+    auth = AuthService(None, "a" * 40, session_days=1, clock=lambda: now[0])  # type: ignore[arg-type]
     user = type("U", (), {"id": 7, "role": "member"})()
     token = auth.issue(user)
     assert auth.read(token).user_id == 7
 
-    other = AuthService(None, "otro-secreto")  # type: ignore[arg-type]
+    other = AuthService(None, "b" * 40)  # type: ignore[arg-type]
     assert other.read(token) is None  # firmada con otra clave
     assert auth.read(token[:-2] + "xx") is None  # alterada
     now[0] += 86400 + 1
@@ -60,7 +60,7 @@ def test_la_sesion_firmada_no_se_puede_falsificar_y_vence():
 
 @pytest.fixture
 def auth(app_session_factory: async_sessionmaker) -> AuthService:
-    return AuthService(app_session_factory, "secreto-de-prueba")
+    return AuthService(app_session_factory, "clave-de-prueba-" * 3)
 
 
 def make_client(app_session_factory, auth, memory=None) -> httpx.AsyncClient:
@@ -255,3 +255,8 @@ async def test_los_websocket_no_ocupan_conexiones():
         assert user is owner
         assert factory.open == 0  # la consulta terminó y la conexión quedó libre
     assert factory.opened == 2
+
+
+def test_no_acepta_una_clave_de_sesion_corta():
+    with pytest.raises(ValueError):
+        AuthService(None, "corta")  # type: ignore[arg-type]

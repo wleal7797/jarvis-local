@@ -27,7 +27,8 @@ C4Component
     Component(c_chat, "ChatController", "Router + WebSocket", "Conversaciones en streaming")
     Component(c_voice, "VoiceController", "WebSocket", "Audio de entrada y de salida")
     Component(c_know, "KnowledgeController", "Router", "Fuentes, documentos e ingesta")
-    Component(c_train, "TrainingController", "Router", "Memoria, feedback, datasets y modelos")
+    Component(c_train, "TrainingController", "Router", "Memoria y calificaciones")
+    Component(c_rem, "ReminderController", "Router + WebSocket", "Recordatorios y avisos en vivo")
 
     Component(s_chat, "ChatService", "Servicio", "Orquesta cada respuesta")
     Component(s_rag, "RetrievalService", "Servicio", "Búsqueda híbrida y RRF")
@@ -35,7 +36,11 @@ C4Component
     Component(s_voice, "STT y TTS", "faster-whisper, Piper", "Voz a texto y texto a voz")
     Component(s_ing, "IngestionService", "Servicio", "Registra fuentes y tareas")
     Component(s_train, "TrainingService", "Servicio", "Datasets y versiones de modelo")
-    Component(s_llm, "OllamaProvider", "Cliente HTTP", "Chat y embeddings")
+    Component(s_auth, "AuthService", "Argon2 + JWT", "Contraseñas, sesiones y roles")
+    Component(s_tools, "ToolBox", "Tool calling", "Recordatorios, estado del PC, archivos, hora")
+    Component(s_rem, "ReminderService", "Servicio + vigilante", "Calcula la hora y avisa al vencer")
+    Component(s_models, "ModelManager", "Servicio", "Importar, activar y volver de versión")
+    Component(s_llm, "OllamaProvider", "Cliente HTTP", "Chat, herramientas y embeddings")
     Component(repos, "Repositorios", "SQLAlchemy", "Acceso a datos")
   }
 
@@ -51,6 +56,10 @@ C4Component
   Rel(s_chat, s_rag, "Busca contexto")
   Rel(s_chat, s_mem, "Recuerda")
   Rel(s_chat, s_llm, "Genera")
+  Rel(s_chat, s_tools, "Usa herramientas")
+  Rel(s_tools, s_rem, "Programa")
+  Rel(c_rem, s_rem, "Usa")
+  Rel(c_auth, s_auth, "Usa")
   Rel(s_rag, s_llm, "Embeddings")
   Rel(s_rag, repos, "Consulta")
   Rel(s_chat, repos, "Guarda")
@@ -103,7 +112,8 @@ sequenceDiagram
 | Componente | Responsabilidad | Depende de |
 |---|---|---|
 | `AuthController` | Login, logout, gestión de usuarios (sólo `owner`) | `AuthService` |
-| `ChatController` | Crear y listar conversaciones; WebSocket de chat | `ChatService` |
+| `ChatController` | WebSocket de chat; sólo la sesión de ahora (no se listan conversaciones viejas) | `ChatService`, `MemoryService` |
+| `ReminderController` | Recordatorios pendientes y `WS /ws/avisos` (cada uno recibe sólo los suyos) | `ReminderService`, `NoticeHub` |
 | `VoiceController` | WebSocket de audio: recibe voz y devuelve texto + audio | `STTService`, `ChatService`, `TTSService` |
 | `KnowledgeController` | CRUD de fuentes y documentos; lanzar ingesta | `IngestionService` |
 | `TrainingController` | Feedback, memoria, datasets, trabajos de entrenamiento, activar modelos | `TrainingService`, `MemoryService` |
@@ -112,4 +122,9 @@ sequenceDiagram
 | `MemoryService` | Extrae y guarda datos sobre el usuario; los recupera por similitud | `EmbeddingService`, `MemoryRepository` |
 | `IngestionService` | Registra fuentes, crea tareas; el worker ejecuta `process(job)` | Loaders, `Chunker`, `EmbeddingService` |
 | `TrainingService` | Convierte el feedback en ejemplos, exporta JSONL y registra modelos GGUF en Ollama | `ModelManager`, repos |
-| `OllamaProvider` | Única puerta hacia Ollama: `chat_stream`, `embed`, `create_model` | Ollama HTTP |
+| `OllamaProvider` | Única puerta hacia Ollama: `chat_stream`, `decide` (herramientas), `complete`, `warm` | Ollama HTTP |
+| `ToolBox` | Herramientas que el modelo puede pedir, según el rol: recordatorios, estado del PC, buscar en archivos, fecha y hora | `ReminderService`, `RetrievalService`, psutil |
+| `ReminderService` | Calcula la hora exacta (el modelo no hace cuentas) y, con un vigilante cada 10 s, entrega los vencidos | `NoticeHub`, repos |
+| `AuthService` | Argon2, sesión firmada (JWT), límite de intentos, usuarios y roles | `UserRepository` |
+| `ModelManager` | Importa un GGUF ajustado, lo activa y vuelve al anterior sin reiniciar | Ollama CLI, `ModelVersionRepository` |
+| `BackupService` | Una copia diaria de la base (`pg_dump`), guarda las últimas 7 | Docker |

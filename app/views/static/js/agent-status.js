@@ -30,6 +30,8 @@
     const fresh = Date.now() - last.at * 1000 < STALE_MS;
     const known = Object.prototype.hasOwnProperty.call(TEXTS, last.state);
     box.hidden = !(fresh && known);
+    // avisos.js: si el agente está encendido, los recordatorios ya suenan por el PC.
+    window.JarvisAgentOn = !box.hidden;
     if (box.hidden) return;
     box.dataset.state = last.state;
     const withText = ["pensando", "buscando", "hablando"].indexOf(last.state) !== -1;

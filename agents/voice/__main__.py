@@ -141,6 +141,20 @@ async def run(args: argparse.Namespace) -> None:
         background.add(task)
         task.add_done_callback(background.discard)
 
+    async def listen_notices() -> None:
+        """Recordatorios: la API los entrega aquí y el agente los dice en voz alta."""
+        wait = 2.0
+        while True:
+            try:
+                async for notice in client.notices():
+                    wait = 2.0
+                    if agent is not None:
+                        await agent.say_notice(notice)
+            except Exception as exc:  # API reiniciándose: se vuelve a conectar
+                logger.info("avisos desconectados", extra={"error": str(exc)})
+            await asyncio.sleep(wait)
+            wait = min(wait * 2, 30.0)
+
     async def keep_warm() -> None:
         while True:
             await asyncio.sleep(WARM_EVERY_SECONDS)
@@ -210,10 +224,12 @@ async def run(args: argparse.Namespace) -> None:
     status('Listo. Diga "Jarvis, …" (Ctrl+C para salir).')
     notify("en_espera")
     warmer = asyncio.create_task(keep_warm())
+    notices = asyncio.create_task(listen_notices())
     try:
         await listen(args, frames, process, conversation, notify, on_audio, sd, agent)
     finally:
         warmer.cancel()
+        notices.cancel()
         await client.set_status("apagado")
         player.close()
         await client.close()
