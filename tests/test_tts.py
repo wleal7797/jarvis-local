@@ -313,3 +313,20 @@ def test_no_acepta_efectos_desconocidos(tmp_path):
     assert tts.effect == "pelicula"
     with pytest.raises(SpeechError):
         tts.configure(effect="robot")
+
+
+def test_pelicula_grave_baja_el_tono_sin_cambiar_la_duracion():
+    from app.services.tts_service import lower_pitch, pitch_factor
+
+    rate = 22050
+    buffer = io.BytesIO()
+    with wave.open(buffer, "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(rate)
+        w.writeframes(b"\x00\x10" * rate)
+    factor = pitch_factor("pelicula_grave")
+    assert factor > 1 and pitch_factor("pelicula") == 1.0
+    with wave.open(io.BytesIO(lower_pitch(buffer.getvalue(), factor))) as w:
+        # Se estira; como Piper habló `factor` veces más rápido, la duración final no cambia.
+        assert w.getnframes() == int(rate * factor)

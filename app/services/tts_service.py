@@ -102,7 +102,38 @@ class SentenceSplitter:
 
 # ---------- Efecto "película" ----------
 
-EFFECTS = ("ninguno", "pelicula")
+EFFECTS = ("ninguno", "pelicula", "pelicula_grave")
+# "pelicula_grave": la voz 2 semitonos más grave, a la misma velocidad.
+GRAVE_SEMITONES = -2.0
+
+
+def pitch_factor(effect: str, semitones: float = GRAVE_SEMITONES) -> float:
+    """Cuánto se estira el audio para bajar el tono (1.0 = igual)."""
+    return 2 ** (-semitones / 12) if effect == "pelicula_grave" else 1.0
+
+
+def lower_pitch(wav: bytes, factor: float) -> bytes:
+    """Baja el tono estirando el audio `factor` veces y reproduciéndolo a la misma
+    frecuencia de muestreo. Se usa con Piper hablando `factor` veces más rápido, así
+    que la duración final queda igual: sólo cambia el tono (más grave)."""
+    if factor == 1.0:
+        return wav
+    import numpy as np
+
+    with wave.open(io.BytesIO(wav)) as source:
+        rate = source.getframerate()
+        audio = np.frombuffer(source.readframes(source.getnframes()), np.int16).astype(np.float32)
+    if audio.size < 2:
+        return wav
+    target = int(audio.size * factor)
+    stretched = np.interp(np.linspace(0, audio.size - 1, target), np.arange(audio.size), audio)
+    out = io.BytesIO()
+    with wave.open(out, "wb") as dest:
+        dest.setnchannels(1)
+        dest.setsampwidth(2)
+        dest.setframerate(rate)
+        dest.writeframes(np.clip(stretched, -32768, 32767).astype(np.int16).tobytes())
+    return out.getvalue()
 
 
 def apply_effect(wav: bytes, effect: str) -> bytes:
@@ -112,7 +143,7 @@ def apply_effect(wav: bytes, effect: str) -> bytes:
     - Dos copias muy cercanas (7 y 13 ms): un brillo metálico suave, de máquina.
     - Dos ecos cortos (40 y 65 ms): como si hablara en una sala amplia.
     """
-    if effect != "pelicula":
+    if effect not in ("pelicula", "pelicula_grave"):
         return wav
     import numpy as np
 
@@ -121,14 +152,10 @@ def apply_effect(wav: bytes, effect: str) -> bytes:
         audio = np.frombuffer(source.readframes(source.getnframes()), np.int16).astype(np.float32)
     if audio.size == 0:
         return wav
-    alpha = 1.0 / (1.0 + 2 * np.pi * 150 / rate)  # paso alto de un polo
-    high = np.empty_like(audio)
-    high[0] = audio[0]
-    previous_in, previous_out = audio[0], audio[0]
-    for i in range(1, audio.size):  # ~0,1 s por frase: barato al lado de Piper
-        previous_out = alpha * (previous_out + audio[i] - previous_in)
-        previous_in = audio[i]
-        high[i] = previous_out
+    from scipy.signal import lfilter
+
+    alpha = 1.0 / (1.0 + 2 * np.pi * 150 / rate)  # paso alto de un polo (~150 Hz)
+    high = lfilter([alpha, -alpha], [1.0, -alpha], audio).astype(np.float32)
     mixed = high.copy()
     for delay_ms, gain in ((7, 0.35), (13, 0.25), (40, 0.18), (65, 0.10)):
         shift = int(rate * delay_ms / 1000)
@@ -256,14 +283,16 @@ class PiperTTS:
             try:
                 from piper import SynthesisConfig
 
-                config = SynthesisConfig(length_scale=self._cfg.length_scale)
+                factor = pitch_factor(self._cfg.effect)
+                # Para bajar el tono sin cambiar la velocidad: más rápido aquí, se estira después.
+                config = SynthesisConfig(length_scale=self._cfg.length_scale / factor)
                 with wave.open(buffer, "wb") as wav_file:
                     self._voice.synthesize_wav(text, wav_file, syn_config=config)
             except Exception as exc:
                 raise SpeechError(f"No se pudo generar la voz: {exc}") from exc
             finally:
                 self._last_used = time.monotonic()
-            data = apply_effect(buffer.getvalue(), self._cfg.effect)
+            data = apply_effect(lower_pitch(buffer.getvalue(), factor), self._cfg.effect)
             with wave.open(io.BytesIO(data)) as wav_file:
                 seconds = wav_file.getnframes() / wav_file.getframerate()
             return SpeechAudio(
