@@ -211,7 +211,7 @@ async def run(args: argparse.Namespace) -> None:
     notify("en_espera")
     warmer = asyncio.create_task(keep_warm())
     try:
-        await listen(args, frames, process, conversation, notify, on_audio, sd)
+        await listen(args, frames, process, conversation, notify, on_audio, sd, agent)
     finally:
         warmer.cancel()
         await client.set_status("apagado")
@@ -219,7 +219,7 @@ async def run(args: argparse.Namespace) -> None:
         await client.close()
 
 
-async def listen(args, frames, process, conversation, notify, on_audio, sd) -> None:
+async def listen(args, frames, process, conversation, notify, on_audio, sd, agent) -> None:
     with sd.InputStream(
         samplerate=SAMPLE_RATE,
         channels=1,
@@ -231,6 +231,7 @@ async def listen(args, frames, process, conversation, notify, on_audio, sd) -> N
         last_mode = None
         while True:
             process(await frames.get())
+            agent.check_stuck()  # vigilante: nunca queda "hablando" en silencio
             conversation.needs_name()  # actualiza el modo si venció la escucha
             if conversation.mode != last_mode and conversation.mode == Mode.DORMIDO:
                 status('En espera. Diga "Jarvis, …"')

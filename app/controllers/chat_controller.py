@@ -1,4 +1,4 @@
-"""Controlador del chat: conversar con JARVIS y consultar el historial."""
+"""Controlador del chat: conversar con JARVIS (sólo la sesión de ahora, sin historial)."""
 
 import asyncio
 import contextlib
@@ -14,12 +14,9 @@ from app.core.dependencies import (
     ChatServiceDep,
     CurrentUserDep,
     MemoryServiceDep,
-    SessionDep,
     TextToSpeechDep,
 )
-from app.repositories import ConversationRepository
-from app.repositories.training_repository import TrainingRepository
-from app.schemas.chat import ChatIn, ConversationOut, MessageOut
+from app.schemas.chat import ChatIn
 from app.services.chat_service import ChatEvent, ConversationNotFoundError
 from app.services.memory_service import Learned, MemoryService
 from app.services.speech_pipeline import stream_with_voice
@@ -106,43 +103,9 @@ async def chat(
     )
 
 
-@router.get("/conversations", response_model=list[ConversationOut], summary="Mis conversaciones")
-async def list_conversations(user: CurrentUserDep, session: SessionDep):
-    return await ConversationRepository(session).list_for_user(user.id)
-
-
-@router.get(
-    "/conversations/{conversation_id}/messages",
-    response_model=list[MessageOut],
-    summary="Mensajes de una conversación",
-)
-async def list_messages(conversation_id: int, user: CurrentUserDep, session: SessionDep):
-    repo = ConversationRepository(session)
-    if await repo.get_for_user(conversation_id, user.id) is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, NOT_FOUND)
-    messages = await repo.messages(conversation_id)
-    ids = [m.id for m in messages]
-    sources = await repo.sources_for(ids)
-    ratings = await TrainingRepository(session).ratings_for(ids)
-    return [
-        MessageOut.model_validate(m).model_copy(
-            update={"sources": sources.get(m.id, []), "rating": ratings.get(m.id)}
-        )
-        for m in messages
-    ]
-
-
-@router.delete(
-    "/conversations/{conversation_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
-    summary="Borrar una conversación y todos sus mensajes",
-)
-async def delete_conversation(conversation_id: int, user: CurrentUserDep, session: SessionDep):
-    repo = ConversationRepository(session)
-    conversation = await repo.get_for_user(conversation_id, user.id)
-    if conversation is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, NOT_FOUND)
-    await repo.delete(conversation)
+# Sin endpoints para ver conversaciones viejas (a pedido del dueño): el chat sólo muestra
+# la sesión de ahora. Las conversaciones quedan guardadas para que JARVIS aprenda
+# (memoria, calificaciones), pero ninguna pantalla ni petición las devuelve.
 
 
 @ws_router.websocket("/ws/chat")

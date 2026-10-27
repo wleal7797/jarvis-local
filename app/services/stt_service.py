@@ -35,6 +35,56 @@ def normalize_name(text: str) -> str:
     return _NAME_VARIANTS.sub("Jarvis", text)
 
 
+# ---------- Textos inventados (alucinaciones de Whisper) ----------
+#
+# Con audio que parece voz pero no tiene palabras claras (TV lejana, una tos, un murmullo)
+# Whisper a veces "inventa" texto: copia trozos de la pista (`initial_prompt`) o frases
+# típicas de subtítulos de YouTube. Con la pista de JARVIS eso producía "Jarvis, el
+# asistente de la casa." y lo despertaba solo (incidente INC-03, docs/incidentes.md).
+
+_KNOWN_HALLUCINATIONS = re.compile(
+    r"suscr[ií]bete|subt[ií]tulos|gracias por ver|amara\.org",
+    re.IGNORECASE,
+)
+# Un segmento se descarta si Whisper dice que probablemente no es voz…
+MAX_NO_SPEECH = 0.6
+# …o si es dudoso y además el modelo estaba poco seguro de las palabras.
+DOUBTFUL_NO_SPEECH = 0.35
+MIN_AVG_LOGPROB = -0.8
+ECHO_WORDS = 4  # 4 palabras seguidas de la pista = la está copiando
+
+
+def _plain_words(text: str) -> list[str]:
+    import unicodedata
+
+    plain = unicodedata.normalize("NFKD", normalize_name(text).lower())
+    plain = plain.encode("ascii", "ignore").decode()
+    return re.findall(r"[a-z0-9]+", plain)
+
+
+def copies_prompt(text: str, prompt: str, words: int = ECHO_WORDS) -> bool:
+    """¿El texto repite `words` palabras seguidas de la pista?"""
+    said, hint = _plain_words(text), _plain_words(prompt)
+    hint_grams = {tuple(hint[i : i + words]) for i in range(len(hint) - words + 1)}
+    return any(tuple(said[i : i + words]) in hint_grams for i in range(len(said) - words + 1))
+
+
+def invented(segment: Any, prompt: str) -> str | None:
+    """Motivo por el que un segmento parece inventado, o None si parece voz de verdad."""
+    text = segment.text.strip()
+    no_speech = getattr(segment, "no_speech_prob", 0.0)
+    logprob = getattr(segment, "avg_logprob", 0.0)
+    if copies_prompt(text, prompt):
+        return "copia la pista"
+    if _KNOWN_HALLUCINATIONS.search(text):
+        return "frase típica de subtítulos"
+    if no_speech > MAX_NO_SPEECH:
+        return "no parece voz"
+    if no_speech > DOUBTFUL_NO_SPEECH and logprob < MIN_AVG_LOGPROB:
+        return "dudoso y poco seguro"
+    return None
+
+
 class TranscriptionError(RuntimeError):
     pass
 
@@ -148,7 +198,17 @@ class FasterWhisperSTT:
                 )
                 if info.duration > MAX_AUDIO_SECONDS:
                     raise TranscriptionError(f"El audio supera {MAX_AUDIO_SECONDS} segundos")
-                text = normalize_name(" ".join(s.text.strip() for s in segments).strip())
+                kept = []
+                for segment in segments:
+                    reason = invented(segment, self._cfg.initial_prompt or "")
+                    if reason:
+                        logger.info(
+                            "texto inventado descartado",
+                            extra={"text": segment.text.strip()[:80], "reason": reason},
+                        )
+                    else:
+                        kept.append(segment.text.strip())
+                text = normalize_name(" ".join(kept).strip())
             except TranscriptionError:
                 raise
             except Exception as exc:  # audio dañado o formato desconocido

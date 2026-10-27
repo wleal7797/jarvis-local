@@ -33,10 +33,10 @@
         Voz de JARVIS
       </button>
     </div>
-    <nav class="conversations" id="conversations" aria-label="Historial">
-      <p class="conversations__empty" id="conversations-empty">Aún no hay conversaciones.</p>
-      <ul class="conversations__list" id="conversations-list"></ul>
-    </nav>
+    <p class="session-note">
+      Sólo ve la conversación de ahora. Al salir se borra de la pantalla;
+      lo importante queda en la memoria de JARVIS.
+    </p>
     <div class="account">
       <span class="account__who">
         <strong>{{ user.display_name }}</strong>
@@ -150,5 +150,5 @@
 <script src="/static/js/chat.js?v={{ v }}"></script>
 <script src="/static/js/voice.js?v={{ v }}"></script>
 <script src="/static/js/voice-settings.js?v={{ v }}"></script>
-<script src="/static/js/agent-status.js?v={{ v }}"></script>
+{% if user.role == "owner" %}<script src="/static/js/agent-status.js?v={{ v }}"></script>{% endif %}
 {% endblock %}

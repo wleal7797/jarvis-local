@@ -77,6 +77,9 @@ function Get-CaddyExe {
     if ($cmd) { return $cmd.Source }
     $link = "$env:LOCALAPPDATA\Microsoft\WinGet\Links\caddy.exe"
     if (Test-Path $link) { return $link }
+    # winget a veces no crea el atajo: el programa queda en Packages\CaddyServer.Caddy_*
+    $pkg = Get-ChildItem "$env:LOCALAPPDATA\Microsoft\WinGet\Packages\CaddyServer.Caddy_*\caddy.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($pkg) { return $pkg.FullName }
     return $null
 }
 

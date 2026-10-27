@@ -55,7 +55,8 @@ async def seed() -> None:
 
         configured = await models.get_by_tag(settings.ollama_chat_model)
         active = await models.get_active()
-        if configured is not None and active is not configured:
+        # Sólo si no hay ninguno activo: no deshace un `jarvis:v1` activado (Etapa 12).
+        if configured is not None and active is None:
             await models.set_active(configured)
             print(f"* modelo activo: {configured.ollama_tag}")
 

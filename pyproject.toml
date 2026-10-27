@@ -58,6 +58,8 @@ filterwarnings = ["ignore:Using `httpx` with `starlette.testclient`"]
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+# Los cuadernos de Colab no son código de la app (Etapa 12).
+extend-exclude = ["training/notebooks"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "SIM"]

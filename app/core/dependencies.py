@@ -18,7 +18,7 @@ from starlette.requests import HTTPConnection
 from app.core.config import Settings, get_settings
 from app.core.database import ping, session_scope
 from app.models import User
-from app.repositories import UserRepository
+from app.repositories import ModelVersionRepository, UserRepository
 from app.services.auth_service import SESSION_COOKIE, AuthService
 from app.services.chat_service import ChatService
 from app.services.embedding_service import Embedder, OllamaEmbedder
@@ -76,8 +76,22 @@ def get_health_service(
     return HealthService(settings, http, db_probe)
 
 
-def get_llm(settings: SettingsDep, http: HttpClientDep) -> LLMProvider:
-    return OllamaProvider(http, settings.ollama_base_url, settings.ollama_chat_model)
+async def get_active_model(settings: SettingsDep, factory: SessionFactoryDep) -> str:
+    """Modelo de chat activo (Etapa 12): el marcado en `model_versions`; si no hay, el del
+    .env. Se lee en cada petición: activar `jarvis:v1` o volver atrás no requiere reiniciar."""
+    try:
+        async with factory() as session:
+            active = await ModelVersionRepository(session).get_active()
+    except Exception:  # sin base de datos (algunas pruebas): el del .env
+        return settings.ollama_chat_model
+    return active.ollama_tag if active is not None else settings.ollama_chat_model
+
+
+ActiveModelDep = Annotated[str, Depends(get_active_model)]
+
+
+def get_llm(settings: SettingsDep, http: HttpClientDep, model: ActiveModelDep) -> LLMProvider:
+    return OllamaProvider(http, settings.ollama_base_url, model)
 
 
 def get_embedder(settings: SettingsDep, http: HttpClientDep) -> Embedder:
@@ -107,12 +121,13 @@ def get_memory_service(
     factory: SessionFactoryDep,
     llm: Annotated[LLMProvider, Depends(get_llm)],
     embedder: EmbedderDep,
+    model: ActiveModelDep,
 ) -> MemoryService:
     return MemoryService(
         factory,
         llm,
         embedder,
-        settings.ollama_chat_model,
+        model,
         budget=settings.memory_token_budget,
         learning=settings.memory_enabled,
     )
@@ -134,6 +149,7 @@ def get_chat_service(
     llm: Annotated[LLMProvider, Depends(get_llm)],
     embedder: EmbedderDep,
     memory: MemoryServiceDep,
+    model: ActiveModelDep,
 ) -> ChatService:
     retriever_factory = None
     if settings.rag_enabled:
@@ -145,7 +161,7 @@ def get_chat_service(
     return ChatService(
         factory,
         llm,
-        settings.ollama_chat_model,
+        model,
         retriever_factory,
         voice_context_tokens=settings.rag_voice_context_tokens,
         voice_max_tokens=settings.voice_max_tokens,

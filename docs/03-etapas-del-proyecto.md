@@ -223,12 +223,13 @@ flowchart LR
 | Sólo datos públicos o sintéticos (personalidad, formato, español) | Colab o Kaggle (nube gratuita) |
 | Contiene datos personales (`contains_personal_data = true`) | **Sólo en local**: modelo de 1B a 3B, más lento pero privado |
 
-**Entregables**
-- Notebook `training/notebooks/jarvis_lora.ipynb` listo para Colab.
-- Script de exportación del dataset a JSONL desde la BD.
-- Conversión a GGUF Q4_K_M y `Modelfile` con el adaptador.
-- `ModelManager`: registra la versión en `model_versions` y permite activarla o volver a la anterior.
-- Comparación modelo base contra modelo ajustado, usando el conjunto de evaluación de la Etapa 5.
+**Entregables** · 🟡 [bitácora](etapas/12-lora.md)
+- [x] Notebook `training/notebooks/jarvis_lora.ipynb` listo para Colab.
+- [x] Dataset de estilo generado y filtrado (`scripts/build_style_dataset.py`) y exportación a JSONL desde la BD, que se niega a sacar datos personales a la nube.
+- [x] Conversión a GGUF Q4_K_M (en el cuaderno) y `Modelfile` generado con la misma personalidad.
+- [x] `ModelManager`: registra la versión en `model_versions` y permite activarla o volver a la anterior, sin reiniciar.
+- [x] Comparación modelo base contra modelo ajustado (`scripts/compare_finetune.py`): estilo con preguntas nunca entrenadas + precisión con el conjunto de la Etapa 5.
+- [ ] Entrenar en Colab (cuenta del dueño) y comparar.
 
 **Terminado cuando:** existe `jarvis:v1` en Ollama, supera al modelo base en el estilo de respuesta y no empeora la precisión.
 

@@ -185,3 +185,65 @@ def test_corrige_como_suena_el_nombre(heard: str, fixed: str):
 async def test_la_transcripcion_sale_con_el_nombre_corregido():
     stt, _ = make_stt(FakeWhisperModel(" Yarbis, ¿qué hora es? "))
     assert (await stt.transcribe(b"audio")).text == "Jarvis, ¿qué hora es?"
+
+
+# ---------- Textos inventados (INC-03: se activaba solo) ----------
+
+PROMPT = WhisperSettings().initial_prompt
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Jarvis, el asistente de la casa.",  # lo que se vio en pantalla
+        "También se pronuncia Yarbis, el asistente de la casa.",
+        "En el canal de subtítulos en español, el asistente de la casa se pronuncia Yarbis.",
+        "¡Suscríbete!",
+    ],
+)
+def test_descarta_lo_que_whisper_inventa(text: str):
+    from app.services.stt_service import invented
+
+    assert invented(SimpleNamespace(text=text, no_speech_prob=0.0, avg_logprob=0.0), PROMPT)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Jarvis, apaga las luces de la casa.",
+        "Jarvis, ¿qué me recomiendas para la cena?",
+        "Jarvis, ¿cómo se pronuncia croissant?",
+        "Jarvis, ¿quién es el asistente de voz más famoso?",
+        "Gracias Jarvis, eso es todo por hoy.",
+    ],
+)
+def test_no_descarta_frases_reales(text: str):
+    from app.services.stt_service import invented
+
+    segment = SimpleNamespace(text=text, no_speech_prob=0.01, avg_logprob=-0.25)
+    assert invented(segment, PROMPT) is None
+
+
+def test_descarta_segmentos_que_no_parecen_voz():
+    from app.services.stt_service import invented
+
+    def seg(no_speech, logprob):
+        return SimpleNamespace(text="Jarvis, sí.", no_speech_prob=no_speech, avg_logprob=logprob)
+
+    assert invented(seg(0.87, -0.5), PROMPT) == "no parece voz"
+    assert invented(seg(0.45, -1.0), PROMPT) == "dudoso y poco seguro"
+    assert invented(seg(0.45, -0.3), PROMPT) is None  # dudoso pero seguro de las palabras
+
+
+async def test_la_transcripcion_sale_sin_lo_inventado():
+    class HallucinatingModel(FakeWhisperModel):
+        def transcribe(self, audio, **kwargs):
+            segments = [
+                SimpleNamespace(
+                    text=" Jarvis, el asistente de la casa.", no_speech_prob=0.5, avg_logprob=-0.9
+                ),
+            ]
+            return iter(segments), SimpleNamespace(language="es", duration=0.4)
+
+    stt, _ = make_stt(HallucinatingModel())
+    assert (await stt.transcribe(b"audio")).text == ""  # nada que empiece con "Jarvis"

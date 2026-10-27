@@ -86,6 +86,7 @@ flowchart LR
 | 01 | [Requisitos de hardware y memoria](docs/01-requisitos-de-hardware.md) |
 | 02 | [Acceso desde otros dispositivos de la casa](docs/02-acceso-desde-la-red-local.md) |
 | 03 | [Etapas del proyecto y entregables](docs/03-etapas-del-proyecto.md) |
+| — | [Registro de incidentes](docs/incidentes.md): errores reales, causa y solución |
 | 04 | [Instalación paso a paso](docs/04-instalacion-paso-a-paso.md) |
 
 ## Hoja de ruta
@@ -104,7 +105,7 @@ flowchart LR
 | 9 | "Jarvis" siempre atento + conversación fluida | ✅ [bitácora](docs/etapas/09-jarvis-siempre-atento.md) |
 | 10 | Memoria: recuerda lo que le cuentas | ✅ [bitácora](docs/etapas/10-memoria.md) |
 | 11 | Seguridad y acceso en la red local | 🟡 [bitácora](docs/etapas/11-seguridad-red-local.md) · falta probar desde el celular |
-| 12 | Fine-tuning con LoRA | ⚪ |
+| 12 | Fine-tuning con LoRA | 🟡 [bitácora](docs/etapas/12-lora.md) · listo para entrenar en Colab |
 | 13 | Herramientas y versión 1.0 | ⚪ |
 
 ## Estructura del repositorio (objetivo)
