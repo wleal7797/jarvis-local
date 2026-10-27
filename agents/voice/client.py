@@ -18,6 +18,7 @@ class JarvisClient:
     def __init__(self, base_url: str = "http://127.0.0.1:8000", token: str | None = None) -> None:
         self._base = base_url.rstrip("/")
         self._ws_url = self._base.replace("http", "ws", 1) + "/ws/chat"
+        self._notices_url = self._base.replace("http", "ws", 1) + "/ws/avisos"
         # Con el inicio de sesión (Etapa 11), el agente entra con el token de data/agent.token.
         self._headers = {"Authorization": f"Bearer {token}"} if token else {}
         self._http = httpx.AsyncClient(base_url=self._base, timeout=120, headers=self._headers)
@@ -42,6 +43,12 @@ class JarvisClient:
         response = await self._http.post("/api/voice/speak", json={"text": text})
         response.raise_for_status()
         return response.content
+
+    async def notices(self) -> AsyncIterator[dict[str, Any]]:
+        """Avisos en vivo (recordatorios vencidos del dueño). Se corta si la API se apaga."""
+        async with websockets.connect(self._notices_url, additional_headers=self._headers) as ws:
+            while True:
+                yield json.loads(await ws.recv())
 
     async def set_status(self, state: str, text: str = "") -> None:
         """Avisa a la pantalla qué está haciendo el agente (si falla, no importa)."""

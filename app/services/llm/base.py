@@ -15,6 +15,22 @@ Role = Literal["system", "user", "assistant", "tool"]
 class ChatMessage:
     role: Role
     content: str
+    # Etapa 13: el modelo pidió usar herramientas (sólo en mensajes del asistente).
+    tool_calls: tuple[dict[str, Any], ...] = ()
+
+    def to_ollama(self) -> dict[str, Any]:
+        data: dict[str, Any] = {"role": self.role, "content": self.content}
+        if self.tool_calls:
+            data["tool_calls"] = list(self.tool_calls)
+        return data
+
+
+@dataclass(frozen=True)
+class ToolDecision:
+    """Lo que respondió el modelo cuando se le ofrecieron herramientas."""
+
+    content: str
+    tool_calls: tuple[dict[str, Any], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -56,6 +72,17 @@ class LLMProvider(Protocol):
     ) -> str:
         """Respuesta completa de una vez. Con `json_schema`, el modelo sólo puede
         responder un JSON con esa forma (útil para tareas internas)."""
+        ...
+
+    async def decide(
+        self,
+        messages: list[ChatMessage],
+        tools: list[dict[str, Any]],
+        *,
+        model: str | None = None,
+        options: dict[str, Any] | None = None,
+    ) -> ToolDecision:
+        """Le ofrece herramientas al modelo: responde con texto o pide usar alguna."""
         ...
 
     async def warm(self, keep_alive: str = "10m", prefill: bool = False) -> None:

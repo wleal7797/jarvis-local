@@ -3,9 +3,16 @@
 > Un asistente al estilo JARVIS que conversa por **texto y voz**, responde con **fuentes verificables** y **aprende de sus dueños**.
 > Corre por completo en un PC de la casa, sin APIs de terceros y sin enviar datos a la nube.
 
-> 🚧 **Proyecto en construcción.** Se desarrolla por etapas y cada una queda documentada en `docs/`.
+**Estado:** ✅ **Versión 1.0**: las 13 etapas construidas y documentadas en `docs/`. Funciona completo **sin internet** (verificado). Pendiente opcional: entrenar el ajuste fino en Colab (Etapa 12).
 
-**Estado:** 🟡 Etapa 10 terminada: recuerda lo que usted le cuenta, también en conversaciones nuevas (panel "Memoria" y 👍 / 👎)
+## Qué hace
+
+- 🎙️ **Siempre atento:** diga *"Jarvis, …"* (se pronuncia "Yarbis") cerca del PC y responde por los parlantes. Sólo reacciona si la frase **empieza** con su nombre.
+- 💬 **Chat por texto o voz** en el navegador del PC, el celular o la tablet (HTTPS en la red de la casa), con **usuario y contraseña** y roles (dueño, familia, invitado).
+- 📚 **Responde con fuentes**: busca en los documentos de la casa y en los suyos (RAG) y cita de dónde sale cada dato.
+- 🧠 **Recuerda lo que usted le cuenta** ("mi perro se llama Rocky") en conversaciones nuevas. El chat sólo muestra la sesión de ahora; lo importante queda en su memoria.
+- ⏰ **Hace cosas:** recordatorios que **avisan en voz alta** a la hora indicada, estado del computador, buscar en sus archivos, fecha y hora.
+- 🔒 **Privado:** nada sale del PC. Copia de seguridad diaria automática de la base de datos.
 
 ## Inicio rápido
 
@@ -54,7 +61,9 @@ Día a día: `.\scripts\jarvis.ps1 iniciar` · `detener` (libera RAM y GPU) · `
 | Vista | Jinja2 · WebSocket · JavaScript y CSS propios (sin CDN) |
 | Voz a texto | [faster-whisper](https://github.com/SYSTRAN/faster-whisper) + Silero VAD |
 | Texto a voz | [Piper](https://github.com/OHF-Voice/piper1-gpl) |
-| Palabra de activación | [openWakeWord](https://github.com/dscripka/openWakeWord) ("hey jarvis") |
+| Activación por nombre | Silero VAD + Whisper: frases que empiezan con "Jarvis" |
+| Herramientas | *Tool calling* de Ollama (recordatorios, estado del PC, archivos, hora) |
+| Inicio de sesión | Argon2 + sesión firmada (JWT), roles |
 | Ajuste fino | [Unsloth](https://github.com/unslothai/unsloth) (QLoRA) → GGUF → Ollama |
 | HTTPS en la red local | [Caddy](https://caddyserver.com) |
 
@@ -64,7 +73,8 @@ Día a día: `.\scripts\jarvis.ps1 iniciar` · `detener` (libera RAM y GPU) · `
 flowchart LR
   U((Usuario)) -->|HTTPS LAN| P[Caddy]
   P --> A[API FastAPI · MVC]
-  M((Micrófono del PC)) --> VA[Agente de voz<br/>hey jarvis] -->|WebSocket| A
+  M((Micrófono del PC)) --> VA[Agente de voz<br/>Jarvis, …] -->|HTTP + WebSocket| A
+  A -->|recordatorios| VA
   A --> O[Ollama<br/>qwen3:4b-instruct · bge-m3]
   A --> D[(PostgreSQL<br/>+ pgvector)]
   W[Worker de ingesta] --> D
@@ -104,11 +114,11 @@ flowchart LR
 | 8 | Texto a voz (Piper) | ✅ [bitácora](docs/etapas/08-texto-a-voz.md) |
 | 9 | "Jarvis" siempre atento + conversación fluida | ✅ [bitácora](docs/etapas/09-jarvis-siempre-atento.md) |
 | 10 | Memoria: recuerda lo que le cuentas | ✅ [bitácora](docs/etapas/10-memoria.md) |
-| 11 | Seguridad y acceso en la red local | 🟡 [bitácora](docs/etapas/11-seguridad-red-local.md) · falta probar desde el celular |
+| 11 | Seguridad y acceso en la red local | ✅ [bitácora](docs/etapas/11-seguridad-red-local.md) |
 | 12 | Fine-tuning con LoRA | 🟡 [bitácora](docs/etapas/12-lora.md) · listo para entrenar en Colab |
-| 13 | Herramientas y versión 1.0 | ⚪ |
+| 13 | Herramientas y versión 1.0 | ✅ [bitácora](docs/etapas/13-herramientas.md) |
 
-## Estructura del repositorio (objetivo)
+## Estructura del repositorio
 
 ```
 JARVIS v1.0/
@@ -122,12 +132,16 @@ JARVIS v1.0/
 │   ├── core/            # configuración, BD, seguridad, logging
 │   └── main.py
 ├── worker/              # worker de ingesta
-├── agents/voice/        # agente de palabra de activación
-├── training/            # notebooks y scripts de LoRA
+├── agents/voice/        # agente de voz: micrófono del PC, "Jarvis, …", recordatorios
+├── deploy/caddy/        # HTTPS para la red de la casa
+├── ollama/              # Modelfile: la personalidad de JARVIS
+├── scripts/             # jarvis.ps1 (encender/apagar), evaluaciones, modelos, copias
+├── training/            # cuaderno de Colab y preguntas para el ajuste fino
 ├── migrations/          # Alembic
 ├── tests/
 ├── docs/                # documentación y bitácoras por etapa
-├── data/                # (ignorado por Git) corpus, audios, copias
+├── data/                # (ignorado por Git) voces, claves, preferencias
+├── backups/             # (ignorado por Git) copias diarias de la base
 └── models/              # (ignorado por Git) archivos GGUF
 ```
 

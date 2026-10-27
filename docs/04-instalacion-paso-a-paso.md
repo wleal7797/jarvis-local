@@ -144,13 +144,26 @@ No hace falta instalar esto ahora. Cada etapa lo instala y lo documenta.
 | 6 | Artículos de Wikipedia elegidos (API pública, sin descargar el volcado completo) | panel *Conocimiento* | ~50 KB por artículo |
 | 7 | faster-whisper + `av<14` (+ modelo `small`, con Silero VAD incluido) | `pip` (el modelo se descarga solo la primera vez) | ~600 MB |
 | 8 | Piper (`piper-tts`) + voces en español | `pip` + `python -m scripts.download_tts_voices` (Piper y Kokoro, a `data/tts`) | ~400 MB |
-| 9 | openWakeWord (filtro de voz Silero + `hey_jarvis`), sounddevice, Whisper `base` | `pip` (los modelos se descargan solos) | ~200 MB |
-| 10 | Caddy | `winget search caddy` y luego `winget install` con el id que aparezca, o descarga desde <https://caddyserver.com/download> | ~40 MB |
-| 10 | argon2-cffi, PyJWT | `pip` | ~5 MB |
+| 9 | openWakeWord (filtro de voz Silero), sounddevice | `pip` (los modelos se descargan solos) | ~200 MB |
+| 11 | Caddy | `scripts\red_local.ps1` (como administrador) o `winget install --id CaddyServer.Caddy` | ~40 MB |
+| 11 | argon2-cffi, PyJWT | `pip` | ~5 MB |
+| 13 | scipy (efecto de voz) | `pip` | ~40 MB |
 | 12 | Cuenta de Google para Colab o cuenta de Kaggle | web | — |
 | 12 | *(sólo si entrenas en local)* PyTorch CUDA + Unsloth | `pip` en un entorno aparte `training/.venv` | ~6 GB |
 
 ---
+
+## Actualizar a una versión nueva
+
+```powershell
+.\scripts\jarvis.ps1 detener
+git pull
+.\.venv\Scripts\python -m pip install -e ".[dev]"
+.\scripts\backup_db.ps1                      # copia de seguridad antes de migrar
+.\.venv\Scripts\alembic upgrade head          # cambios en la base (p. ej. recordatorios, Etapa 13)
+ollama create jarvis:base -f ollama/Modelfile  # si cambió la personalidad
+.\scripts\jarvis.ps1 iniciar
+```
 
 ## Verificación rápida (cuando termines los pasos 1 a 7)
 

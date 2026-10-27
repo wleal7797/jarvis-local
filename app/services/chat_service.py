@@ -27,10 +27,11 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.models import Conversation, Message, MessageSource
 from app.repositories import ConversationRepository, ModelVersionRepository
 from app.services.embedding_service import EmbeddingError
-from app.services.llm import LLMError, LLMProvider
+from app.services.llm import ChatChunk, ChatMessage, LLMError, LLMProvider
 from app.services.memory_service import is_personal_statement
 from app.services.prompt_builder import CONTEXT_TOKEN_BUDGET, build_messages, fit_context
 from app.services.retrieval_service import RetrievedChunk
+from app.services.tools import ToolBox, ToolCallResult, ToolContext, wants_tools
 
 logger = logging.getLogger(__name__)
 
@@ -103,6 +104,11 @@ def asks_about_user(text: str) -> bool:
     return "?" in text and bool(_ABOUT_USER.search(text))
 
 
+async def _no_chunks() -> AsyncIterator[ChatChunk]:
+    return
+    yield  # pragma: no cover  (generador vacío)
+
+
 def cited_numbers(answer: str, available: int) -> list[int]:
     """Números de fuente que el modelo citó de verdad (ignora los inventados)."""
     found = {int(n) for n in CITATION.findall(answer)}
@@ -134,6 +140,7 @@ class ChatService:
         voice_max_tokens: int = VOICE_MAX_TOKENS,
         memory: MemorySource | None = None,
         clock: Callable[[], datetime] | None = None,
+        tools: ToolBox | None = None,
     ) -> None:
         self._session_factory = session_factory
         self._llm = llm
@@ -143,6 +150,7 @@ class ChatService:
         self._voice_max_tokens = voice_max_tokens
         self._memory = memory
         self._clock = clock or (lambda: datetime.now().astimezone())
+        self._tools = tools
 
     async def ensure_conversation(self, user_id: int, conversation_id: int) -> None:
         """Lanza `ConversationNotFoundError` si no existe o no es de ese usuario."""
@@ -157,8 +165,10 @@ class ChatService:
         conversation_id: int | None = None,
         *,
         voice: bool = False,
+        role: str = "owner",
     ) -> AsyncIterator[ChatEvent]:
-        """`voice=True`: conversación hablada, se lee menos contexto para responder antes."""
+        """`voice=True`: conversación hablada, se lee menos contexto para responder antes.
+        `role`: decide qué herramientas puede usar (Etapa 13)."""
         started = time.perf_counter()
 
         # 1. Guardar la pregunta.
@@ -191,6 +201,10 @@ class ChatService:
         # Por voz, "¿cómo se llama mi perro?" ya lo sabe: buscar documentos costaría ~10 s.
         if voice and known and asks_about_user(text):
             wants_documents = False
+        # Herramientas (Etapa 13): sólo si la frase parece pedirlas ("recuérdame…").
+        tools = self._tools.for_role(role) if self._tools is not None and wants_tools(text) else []
+        if tools:
+            wants_documents = False  # la herramienta de archivos busca si hace falta
 
         # 3. Buscar en los documentos.
         # "Me gusta el café sin azúcar" se recuerda, no se busca. Por voz, tampoco la charla
@@ -211,20 +225,53 @@ class ChatService:
         # 4. Generar la respuesta en streaming.
         parts: list[str] = []
         stats = None
+        used: list[ToolCallResult] = []
+        messages = build_messages(
+            history,
+            text,
+            context,
+            spoken=voice,
+            memories=facts,
+            known=known,
+            now=self._clock(),
+        )
         try:
-            async for chunk in self._llm.chat_stream(
-                build_messages(
-                    history,
-                    text,
-                    context,
-                    spoken=voice,
-                    memories=facts,
-                    known=known,
-                    now=self._clock(),
-                ),
-                model=self._model,
-                options={"num_predict": self._voice_max_tokens} if voice else None,
-            ):
+            if tools:
+                # 4a. ¿Usa alguna herramienta? (sin streaming: hay que ver qué decide)
+                decision = await self._llm.decide(
+                    messages, [t.schema() for t in tools], model=self._model,
+                    options={"temperature": 0},
+                )  # fmt: skip
+                if decision.tool_calls:
+                    ctx = ToolContext(user_id=user_id, role=role, now=self._clock())
+                    for call in decision.tool_calls[:3]:
+                        function = call.get("function", {})
+                        result = await self._tools.run(  # type: ignore[union-attr]
+                            function.get("name", ""), function.get("arguments", {}), ctx
+                        )
+                        used.append(result)
+                        yield {"type": "tool", "name": result.name, "ok": result.ok}
+                    # 4b. El modelo dice el resultado con sus palabras (con streaming).
+                    messages = [
+                        *messages,
+                        ChatMessage(role="assistant", content="", tool_calls=decision.tool_calls),
+                        *(ChatMessage(role="tool", content=r.result) for r in used),
+                    ]
+                elif decision.content.strip():
+                    # No hacía falta ninguna: ya respondió.
+                    first_token_ms = int((time.perf_counter() - started) * 1000)
+                    parts.append(decision.content)
+                    yield {"type": "token", "content": decision.content}
+            stream = (
+                self._llm.chat_stream(
+                    messages,
+                    model=self._model,
+                    options={"num_predict": self._voice_max_tokens} if voice else None,
+                )
+                if not parts
+                else _no_chunks()
+            )
+            async for chunk in stream:
                 if chunk.content:
                     if first_token_ms is None:
                         first_token_ms = int((time.perf_counter() - started) * 1000)
@@ -282,6 +329,7 @@ class ChatService:
             "tokens_out": reply.tokens_out,
             "tokens_per_second": stats.tokens_per_second if stats else None,
             "cited": cited,
+            "tools": [r.name for r in used],
         }
 
     async def _retrieve(self, text: str, user_id: int, budget: int) -> list[RetrievedChunk]:

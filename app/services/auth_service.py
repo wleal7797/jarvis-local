@@ -80,6 +80,8 @@ class AuthService:
         clock: Callable[[], float] = time.time,
     ) -> None:
         self._session_factory = session_factory
+        if len(secret_key) < 32:  # HS256 necesita una clave de al menos 32 caracteres
+            raise ValueError("La clave de las sesiones es demasiado corta (mínimo 32).")
         self._secret = secret_key
         self._seconds = session_days * 86400
         self._clock = clock

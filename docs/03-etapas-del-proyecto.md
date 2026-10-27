@@ -207,7 +207,7 @@ flowchart LR
 - [x] `Caddyfile` con `tls internal` y una [guía](02-acceso-desde-la-red-local.md) para instalar el certificado en el celular.
 - [x] Regla de firewall sólo para la red privada (`scripts/red_local.ps1`, lo ejecuta el dueño) y guía para reservar la IP en el router.
 - [x] Pruebas: un `guest` no puede ver los documentos ni los recuerdos personales.
-- [ ] Prueba desde el celular del dueño.
+- [x] Prueba desde el celular del dueño: entra por `https://<ip-del-pc>` y le habla con el micrófono.
 
 **Terminado cuando:** desde el celular entras con usuario y contraseña a `https://<ip-del-pc>` y le hablas a JARVIS por el micrófono del celular.
 
@@ -239,11 +239,13 @@ flowchart LR
 **Tecnología:** *tool calling* de Ollama + pruebas de extremo a extremo.
 **Objetivo:** que JARVIS haga cosas y no sólo responda.
 
-**Entregables**
-- Herramientas locales: hora y fecha, recordatorios, búsqueda en tus archivos y estado del sistema (CPU, GPU, disco).
-- Copias de seguridad automáticas de la BD.
-- README final con capturas, video corto de demostración y diagramas actualizados.
-- Etiqueta `v1.0.0` y *release* en GitHub.
+**Entregables** · ✅ [bitácora](etapas/13-herramientas.md)
+- [x] Herramientas locales: hora y fecha, **recordatorios que avisan en voz alta**, búsqueda en tus archivos y estado del sistema (CPU, GPU, disco).
+- [x] Copias de seguridad automáticas de la BD (diarias, se guardan 7; restauración verificada).
+- [x] README final y diagramas actualizados (C4, modelo relacional).
+- [x] Verificado **sin internet**: API y agente de voz con una guardia que bloquea toda conexión externa → 0 intentos.
+- [ ] Capturas y video corto de demostración (los graba el dueño).
+- [ ] Etiqueta `v1.0.0` y *release* en GitHub (al fusionar los PR, con el visto bueno del dueño).
 
 **Terminado cuando:** todas las pruebas pasan y JARVIS funciona completo **sin conexión a internet**.
 

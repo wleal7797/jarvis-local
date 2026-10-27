@@ -24,6 +24,7 @@ erDiagram
   documents ||--o{ chunks : "se divide en"
   sources ||--o{ ingestion_jobs : "procesa"
   users ||--o{ memories : "recuerda"
+  users ||--o{ reminders : "programa"
   messages |o--o{ memories : "origina"
   training_datasets ||--o{ training_examples : "contiene"
   feedback |o--o{ training_examples : "alimenta"
@@ -84,6 +85,15 @@ erDiagram
     bigint source_message_id FK
     timestamptz created_at
     timestamptz last_used_at
+  }
+  reminders {
+    bigint id PK
+    bigint user_id FK
+    text text "qué recordar"
+    timestamptz due_at "cuándo avisar"
+    timestamptz fired_at "nulo = pendiente"
+    boolean late "avisó tarde"
+    timestamptz created_at
   }
   sources {
     bigint id PK

@@ -21,6 +21,7 @@ from app.controllers import (
     health_controller,
     knowledge_controller,
     page_controller,
+    reminder_controller,
     training_controller,
     voice_controller,
 )
@@ -30,6 +31,8 @@ from app.core.keys import load_or_create
 from app.core.logging import setup_logging
 from app.core.preferences import load_preferences
 from app.services.auth_service import AuthService
+from app.services.backup_service import BackupService
+from app.services.reminder_service import NoticeHub, ReminderService
 from app.services.stt_service import FasterWhisperSTT, WhisperSettings
 from app.services.tts_service import PiperSettings, PiperTTS
 from app.services.voice_status import VoiceStatusHub
@@ -67,6 +70,11 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         )
     )
     app.state.voice_status = VoiceStatusHub()
+    # Recordatorios (Etapa 13): el vigilante revisa cada 10 s y avisa a quien los creó.
+    app.state.notices = NoticeHub()
+    reminder_watcher = asyncio.create_task(
+        ReminderService(app.state.session_factory).run_watcher(app.state.notices)
+    )
     # Inicio de sesión (Etapa 11): claves creadas solas en data/ (nunca van a Git).
     app.state.auth = AuthService(
         app.state.session_factory,
@@ -76,9 +84,19 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.agent_token = load_or_create(settings.agent_token_file)
     stt_watcher = asyncio.create_task(app.state.stt.run_idle_watcher())
     tts_watcher = asyncio.create_task(app.state.tts.run_idle_watcher())
+    # Copias de seguridad automáticas (Etapa 13): una al día mientras JARVIS esté encendido.
+    watchers = [stt_watcher, tts_watcher, reminder_watcher]
+    if settings.backup_enabled:
+        backups = BackupService(
+            settings.backup_dir,
+            database=settings.postgres_db,
+            user=settings.postgres_user,
+            keep=settings.backup_keep,
+        )
+        watchers.append(asyncio.create_task(backups.run_watcher()))
     logger.info("JARVIS iniciado", extra={"environment": settings.environment})
     yield
-    for watcher in (stt_watcher, tts_watcher):
+    for watcher in watchers:
         watcher.cancel()
         with contextlib.suppress(asyncio.CancelledError):
             await watcher
@@ -127,6 +145,8 @@ def create_app() -> FastAPI:
     app.include_router(voice_controller.router)
     app.include_router(voice_controller.ws_router)
     app.include_router(training_controller.router)
+    app.include_router(reminder_controller.router)
+    app.include_router(reminder_controller.ws_router)
     return app
 
 

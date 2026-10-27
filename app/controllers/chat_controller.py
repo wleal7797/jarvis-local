@@ -45,7 +45,9 @@ def memory_event(learned: Learned) -> ChatEvent:
 async def _tap_end(events: AsyncIterator[ChatEvent], seen: dict) -> AsyncIterator[ChatEvent]:
     """Deja pasar los eventos y anota el id de la respuesta cuando termina."""
     async for event in events:
-        if event["type"] == "end":
+        # Si usó herramientas (un recordatorio, por ejemplo) no hay nada que aprender:
+        # quedaría un recuerdo viejo ("debe sacar la basura el 27 de octubre").
+        if event["type"] == "end" and not event.get("tools"):
             seen["message_id"] = event["message_id"]
         yield event
 
@@ -97,7 +99,7 @@ async def chat(
         except ConversationNotFoundError:
             raise HTTPException(status.HTTP_404_NOT_FOUND, NOT_FOUND) from None
 
-    events = service.answer(user.id, body.message, body.conversation_id)
+    events = service.answer(user.id, body.message, body.conversation_id, role=user.role)
     return StreamingResponse(
         _ndjson(events, memory, user.id, user.role), media_type="application/x-ndjson"
     )
@@ -147,7 +149,13 @@ async def chat_ws(
                     continue
             seen: dict = {}
             events = _tap_end(
-                service.answer(user.id, body.message, body.conversation_id, voice=body.voice),
+                service.answer(
+                    user.id,
+                    body.message,
+                    body.conversation_id,
+                    voice=body.voice,
+                    role=user.role,
+                ),
                 seen,
             )
             if body.voice:

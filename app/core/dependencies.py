@@ -26,8 +26,10 @@ from app.services.health_service import DatabaseProbe, HealthService
 from app.services.ingestion import IngestionService
 from app.services.llm import LLMProvider, OllamaProvider
 from app.services.memory_service import MemoryService
+from app.services.reminder_service import NoticeHub, ReminderService
 from app.services.retrieval_service import RetrievalService, RetrievalSettings
 from app.services.stt_service import SpeechToText
+from app.services.tools import ToolBox, file_tools, reminder_tools, system_tools
 from app.services.training_service import TrainingService
 from app.services.tts_service import TextToSpeech
 from app.services.voice_status import VoiceStatusHub
@@ -143,6 +145,43 @@ def get_training_service(factory: SessionFactoryDep) -> TrainingService:
 TrainingServiceDep = Annotated[TrainingService, Depends(get_training_service)]
 
 
+def get_reminder_service(factory: SessionFactoryDep) -> ReminderService:
+    return ReminderService(factory)
+
+
+ReminderServiceDep = Annotated[ReminderService, Depends(get_reminder_service)]
+
+
+def get_notice_hub(conn: HTTPConnection) -> NoticeHub:
+    """Avisos en vivo por usuario (uno para toda la app, creado en `main.py`)."""
+    return conn.app.state.notices
+
+
+NoticeHubDep = Annotated[NoticeHub, Depends(get_notice_hub)]
+
+
+def get_toolbox(
+    settings: SettingsDep,
+    factory: SessionFactoryDep,
+    embedder: EmbedderDep,
+    reminders: ReminderServiceDep,
+) -> ToolBox:
+    """Herramientas de JARVIS (Etapa 13). La búsqueda en archivos respeta los permisos:
+    cada uno ve los documentos de la casa y sólo sus propios documentos personales."""
+    config = retrieval_settings(settings)
+
+    async def search(query: str, user_id: int):
+        async with factory() as session:
+            return await RetrievalService(session, embedder, config).search(
+                query, owner_user_id=user_id
+            )
+
+    return ToolBox(reminder_tools(reminders) + system_tools() + file_tools(search))
+
+
+ToolBoxDep = Annotated[ToolBox, Depends(get_toolbox)]
+
+
 def get_chat_service(
     settings: SettingsDep,
     factory: SessionFactoryDep,
@@ -150,6 +189,7 @@ def get_chat_service(
     embedder: EmbedderDep,
     memory: MemoryServiceDep,
     model: ActiveModelDep,
+    tools: ToolBoxDep,
 ) -> ChatService:
     retriever_factory = None
     if settings.rag_enabled:
@@ -166,6 +206,7 @@ def get_chat_service(
         voice_context_tokens=settings.rag_voice_context_tokens,
         voice_max_tokens=settings.voice_max_tokens,
         memory=memory if settings.memory_enabled else None,
+        tools=tools if settings.tools_enabled else None,
     )
 
 
