@@ -202,11 +202,12 @@ flowchart LR
 **Tecnología:** Caddy (HTTPS local) + Argon2 + sesiones con JWT + Firewall de Windows.
 **Objetivo:** entrar desde el celular y otros dispositivos de forma segura. Ver [acceso en red](02-acceso-desde-la-red-local.md).
 
-**Entregables**
-- `AuthService`, login y los roles `owner`, `member` y `guest`.
-- `Caddyfile` con `tls internal` y una guía para instalar el certificado en el celular.
-- Regla de firewall sólo para la red privada y reserva de IP en el router.
-- Pruebas: un `guest` no puede ver los documentos ni los recuerdos personales.
+**Entregables** · 🟡 [bitácora](etapas/11-seguridad-red-local.md)
+- [x] `AuthService`, login y los roles `owner`, `member` y `guest` (Argon2, sesión firmada, límite de intentos).
+- [x] `Caddyfile` con `tls internal` y una [guía](02-acceso-desde-la-red-local.md) para instalar el certificado en el celular.
+- [x] Regla de firewall sólo para la red privada (`scripts/red_local.ps1`, lo ejecuta el dueño) y guía para reservar la IP en el router.
+- [x] Pruebas: un `guest` no puede ver los documentos ni los recuerdos personales.
+- [ ] Prueba desde el celular del dueño.
 
 **Terminado cuando:** desde el celular entras con usuario y contraseña a `https://<ip-del-pc>` y le hablas a JARVIS por el micrófono del celular.
 

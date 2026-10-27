@@ -4,6 +4,7 @@ Los controladores piden lo que necesitan con `Depends(...)` y no crean nada por 
 Esto permite reemplazar piezas en las pruebas.
 """
 
+import secrets
 from collections.abc import AsyncIterator
 from functools import partial
 from pathlib import Path
@@ -18,6 +19,7 @@ from app.core.config import Settings, get_settings
 from app.core.database import ping, session_scope
 from app.models import User
 from app.repositories import UserRepository
+from app.services.auth_service import SESSION_COOKIE, AuthService
 from app.services.chat_service import ChatService
 from app.services.embedding_service import Embedder, OllamaEmbedder
 from app.services.health_service import DatabaseProbe, HealthService
@@ -151,13 +153,17 @@ def get_chat_service(
     )
 
 
-async def get_current_user(settings: SettingsDep, session: SessionDep) -> User:
-    """Usuario que está conversando.
+def get_auth_service(conn: HTTPConnection) -> AuthService | None:
+    """Uno para toda la app (lo crea `main.py`; guarda los intentos fallidos)."""
+    return getattr(conn.app.state, "auth", None)
 
-    Mientras no exista el inicio de sesión (Etapa 11), siempre es el usuario por defecto
-    que crea `scripts/seed.py`.
-    """
-    user = await UserRepository(session).get_by_username(settings.default_username)
+
+AuthServiceDep = Annotated[AuthService | None, Depends(get_auth_service)]
+
+
+async def _owner(settings: Settings, factory: async_sessionmaker[AsyncSession]) -> User:
+    async with factory() as session:
+        user = await UserRepository(session).get_by_username(settings.default_username)
     if user is None or not user.is_active:
         raise HTTPException(
             status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -166,7 +172,71 @@ async def get_current_user(settings: SettingsDep, session: SessionDep) -> User:
     return user
 
 
+async def get_optional_user(
+    conn: HTTPConnection,
+    settings: SettingsDep,
+    factory: SessionFactoryDep,
+    auth: AuthServiceDep,
+) -> User | None:
+    """¿Quién hace la petición? (Etapa 11)
+
+    Usa una sesión de base de datos CORTA (se abre, consulta y se cierra). Con `SessionDep`
+    la conexión quedaba ocupada mientras durara la petición; en un WebSocket eso es todo el
+    tiempo que la página está abierta, y con varias pestañas se acababan las 10 conexiones.
+
+    1. El agente de voz de este PC: `Authorization: Bearer <data/agent.token>` → el dueño.
+    2. Con el inicio de sesión apagado (`AUTH_ENABLED=false`): el dueño.
+    3. Si no: la cookie de sesión firmada. Sin ella (o vencida), nadie.
+    """
+    header = conn.headers.get("authorization", "")
+    agent_token = getattr(conn.app.state, "agent_token", None)
+    if (
+        agent_token
+        and header.startswith("Bearer ")
+        and secrets.compare_digest(header[7:].encode(), agent_token.encode())
+    ):
+        return await _owner(settings, factory)
+    if not settings.auth_enabled:
+        return await _owner(settings, factory)
+    if auth is None:
+        return None
+    found = auth.read(conn.cookies.get(SESSION_COOKIE))
+    if found is None:
+        return None
+    async with factory() as session:
+        user = await UserRepository(session).get(found.user_id)
+    return user if user is not None and user.is_active else None
+
+
+OptionalUserDep = Annotated[User | None, Depends(get_optional_user)]
+
+
+async def get_current_user(user: OptionalUserDep) -> User:
+    if user is None:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Inicie sesión para continuar.")
+    return user
+
+
 CurrentUserDep = Annotated[User, Depends(get_current_user)]
+
+
+def require_roles(*roles: str):
+    """Dependencia: sólo pasan los usuarios con alguno de esos roles."""
+
+    async def check(user: CurrentUserDep) -> User:
+        if user.role not in roles:
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "No tiene permiso para esto.")
+        return user
+
+    return check
+
+
+# Familia y dueño: documentos, memoria, calificaciones y ajustes de voz.
+require_member = require_roles("owner", "member")
+# Sólo el dueño: usuarios y lo que usa el agente de voz.
+require_owner = require_roles("owner")
+MemberDep = Annotated[User, Depends(require_member)]
+OwnerDep = Annotated[User, Depends(require_owner)]
 ChatServiceDep = Annotated[ChatService, Depends(get_chat_service)]
 
 

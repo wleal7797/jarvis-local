@@ -317,6 +317,15 @@
   }
 
   // Para voice.js: enviar lo que se dijo por voz como un mensaje más.
+  // Salir: borra la sesión y vuelve a la pantalla de entrada.
+  const logout = document.getElementById("logout");
+  if (logout) {
+    logout.addEventListener("click", async () => {
+      try { await fetch("/api/auth/logout", { method: "POST" }); } catch (_) { /* igual sale */ }
+      location.replace("/login");
+    });
+  }
+
   window.JarvisChat = {
     send: sendMessage,
     isBusy: () => state.busy || !state.connected,

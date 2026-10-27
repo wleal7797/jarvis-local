@@ -1,12 +1,9 @@
 """Pruebas de lo que hace más ágil la voz: estado en pantalla, precarga y respuestas cortas."""
 
-from types import SimpleNamespace
-
 import pytest
 from fastapi.testclient import TestClient
 
 from app.core.dependencies import (
-    get_current_user,
     get_llm,
     get_stt,
     get_tts,
@@ -16,7 +13,7 @@ from app.main import create_app
 from app.services.prompt_builder import SPOKEN_INSTRUCTIONS, build_messages
 from app.services.stt_service import FasterWhisperSTT, WhisperSettings
 from app.services.voice_status import VoiceStatusHub
-from tests.fakes import FakeLLM
+from tests.fakes import FakeLLM, as_owner
 
 # ---------- Estado del agente ----------
 
@@ -53,7 +50,7 @@ class WarmStub:
 
 def app_client(hub=None, stt=None, tts=None, llm=None) -> TestClient:
     app = create_app()
-    app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(id=1)
+    as_owner(app)
     app.dependency_overrides[get_voice_status] = lambda: hub or VoiceStatusHub()
     app.dependency_overrides[get_stt] = lambda: stt or WarmStub()
     app.dependency_overrides[get_tts] = lambda: tts or WarmStub()

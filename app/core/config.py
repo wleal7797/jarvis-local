@@ -70,8 +70,15 @@ class Settings(BaseSettings):
     ingestion_allow_internet: bool = True
     uploads_dir: str = "data/uploads"
 
-    # Usuario con el que se conversa hasta que exista el inicio de sesión (Etapa 11).
+    # El dueño (lo crea scripts/seed.py). Con el inicio de sesión apagado, todos son él.
     default_username: str = "dueno"
+
+    # Inicio de sesión (Etapa 11). Apagarlo sólo en pruebas o si nadie más usa la red.
+    auth_enabled: bool = True
+    auth_session_days: int = 30
+    # Se crean solos en data/ la primera vez (data/ nunca va a Git).
+    secret_key_file: str = "data/secret.key"
+    agent_token_file: str = "data/agent.token"
 
     postgres_user: str = "jarvis"
     postgres_password: SecretStr = SecretStr("")

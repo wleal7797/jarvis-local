@@ -26,6 +26,8 @@ from fastapi import (
 from app.core.dependencies import (
     CurrentUserDep,
     LLMDep,
+    MemberDep,
+    OwnerDep,
     SpeechToTextDep,
     TextToSpeechDep,
     VoiceStatusDep,
@@ -94,7 +96,10 @@ async def speak(body: SpeakIn, user: CurrentUserDep, tts: TextToSpeechDep) -> Re
 
 def _settings_out(tts) -> VoiceSettingsOut:
     return VoiceSettingsOut(
-        voice=tts.voice_name, length_scale=tts.length_scale, installed=tts.installed_voices()
+        voice=tts.voice_name,
+        length_scale=tts.length_scale,
+        effect=tts.effect,
+        installed=tts.installed_voices(),
     )
 
 
@@ -108,12 +113,18 @@ async def get_voice_settings(user: CurrentUserDep, tts: TextToSpeechDep):
     response_model=VoiceSettingsOut,
     summary="Cambiar la voz o la velocidad (se aplica al instante y se recuerda)",
 )
-async def update_voice_settings(body: VoiceSettingsIn, user: CurrentUserDep, tts: TextToSpeechDep):
+async def update_voice_settings(body: VoiceSettingsIn, user: MemberDep, tts: TextToSpeechDep):
     try:
-        tts.configure(voice=body.voice, length_scale=body.length_scale)
+        tts.configure(voice=body.voice, length_scale=body.length_scale, effect=body.effect)
     except SpeechError as exc:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from None
-    save_preferences({"tts_voice": tts.voice_name, "tts_length_scale": tts.length_scale})
+    save_preferences(
+        {
+            "tts_voice": tts.voice_name,
+            "tts_length_scale": tts.length_scale,
+            "tts_effect": tts.effect,
+        }
+    )
     return _settings_out(tts)
 
 
@@ -123,7 +134,7 @@ async def update_voice_settings(body: VoiceSettingsIn, user: CurrentUserDep, tts
     summary="Dejar listos Whisper, la voz y el modelo de chat (los llama el agente de voz)",
 )
 async def warm(
-    user: CurrentUserDep,
+    user: OwnerDep,
     stt: SpeechToTextDep,
     tts: TextToSpeechDep,
     llm: LLMDep,
@@ -152,7 +163,7 @@ async def get_agent_status(user: CurrentUserDep, hub: VoiceStatusDep):
 
 
 @router.put("/agent", response_model=AgentStatusOut, summary="El agente de voz avisa su estado")
-async def put_agent_status(body: AgentStatusIn, user: CurrentUserDep, hub: VoiceStatusDep):
+async def put_agent_status(body: AgentStatusIn, user: OwnerDep, hub: VoiceStatusDep):
     try:
         current = hub.publish(body.state, body.text)
     except ValueError as exc:
@@ -161,7 +172,9 @@ async def put_agent_status(body: AgentStatusIn, user: CurrentUserDep, hub: Voice
 
 
 @ws_router.websocket("/ws/voice-status")
-async def voice_status_socket(websocket: WebSocket, hub: VoiceStatusDep) -> None:
+async def voice_status_socket(
+    websocket: WebSocket, user: CurrentUserDep, hub: VoiceStatusDep
+) -> None:
     """Empuja al navegador cada cambio de estado del agente de voz."""
     await websocket.accept()
     queue = hub.subscribe()

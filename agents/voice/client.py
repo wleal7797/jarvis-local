@@ -1,5 +1,6 @@
 """Habla con la API de JARVIS: transcribir (Whisper small) y conversar (WebSocket con voz)."""
 
+import asyncio
 import base64
 import contextlib
 import json
@@ -9,12 +10,17 @@ from typing import Any
 import httpx
 import websockets
 
+# Sin noticias de la API durante este tiempo = algo falló: se avisa y se sigue escuchando.
+RECV_TIMEOUT = 90
+
 
 class JarvisClient:
-    def __init__(self, base_url: str = "http://127.0.0.1:8000") -> None:
+    def __init__(self, base_url: str = "http://127.0.0.1:8000", token: str | None = None) -> None:
         self._base = base_url.rstrip("/")
         self._ws_url = self._base.replace("http", "ws", 1) + "/ws/chat"
-        self._http = httpx.AsyncClient(base_url=self._base, timeout=120)
+        # Con el inicio de sesión (Etapa 11), el agente entra con el token de data/agent.token.
+        self._headers = {"Authorization": f"Bearer {token}"} if token else {}
+        self._http = httpx.AsyncClient(base_url=self._base, timeout=120, headers=self._headers)
 
     async def close(self) -> None:
         await self._http.aclose()
@@ -51,11 +57,13 @@ class JarvisClient:
 
     async def chat(self, text: str, conversation_id: int | None) -> AsyncIterator[dict[str, Any]]:
         """Eventos del chat con voz. Los de tipo "audio" traen `wav` (bytes) ya decodificado."""
-        async with websockets.connect(self._ws_url, max_size=2**24) as ws:
+        async with websockets.connect(
+            self._ws_url, max_size=2**24, additional_headers=self._headers
+        ) as ws:
             payload = {"message": text, "conversation_id": conversation_id, "voice": True}
             await ws.send(json.dumps(payload))
             while True:
-                event = json.loads(await ws.recv())
+                event = json.loads(await asyncio.wait_for(ws.recv(), RECV_TIMEOUT))
                 if event["type"] == "audio":
                     event["wav"] = base64.b64decode(event.pop("audio"))
                 yield event

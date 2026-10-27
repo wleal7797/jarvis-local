@@ -1,14 +1,13 @@
 """Preferencias guardadas desde la app y endpoint de ajustes de voz."""
 
-from types import SimpleNamespace
-
 import httpx
 import pytest
 
-from app.core.dependencies import get_current_user, get_tts
+from app.core.dependencies import get_tts
 from app.core.preferences import load_preferences, save_preferences
 from app.main import create_app
 from app.services.tts_service import PiperSettings, PiperTTS
+from tests.fakes import as_owner
 
 pytestmark = pytest.mark.anyio
 
@@ -36,7 +35,7 @@ async def test_endpoint_de_ajustes_de_voz(tmp_path, monkeypatch):
     )
     tts = PiperTTS(PiperSettings(voices_dir=str(tmp_path), voice="es_ES-davefx-medium"))
     app = create_app()
-    app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(id=1)
+    as_owner(app)
     app.dependency_overrides[get_tts] = lambda: tts
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
@@ -48,7 +47,9 @@ async def test_endpoint_de_ajustes_de_voz(tmp_path, monkeypatch):
         )
         assert changed.status_code == 200
         assert changed.json()["voice"] == "es_MX-claude-high"
-        assert saved == [{"tts_voice": "es_MX-claude-high", "tts_length_scale": 1.15}]
+        assert saved == [
+            {"tts_voice": "es_MX-claude-high", "tts_length_scale": 1.15, "tts_effect": "ninguno"}
+        ]
 
         missing = await client.put("/api/voice/settings", json={"voice": "no-existe"})
         assert missing.status_code == 422

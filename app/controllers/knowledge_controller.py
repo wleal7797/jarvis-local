@@ -6,7 +6,7 @@ Los archivos, la web y Wikipedia se **encolan**: el worker (`python -m worker`) 
 
 from typing import Annotated
 
-from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from sqlalchemy import func, select
 
 from app.core.dependencies import (
@@ -15,6 +15,7 @@ from app.core.dependencies import (
     IngestionServiceDep,
     SessionDep,
     SettingsDep,
+    require_member,
 )
 from app.core.dependencies import retrieval_settings as build_retrieval_settings
 from app.models import Chunk, Document, IngestionJob, Source
@@ -34,7 +35,10 @@ from app.services.ingestion.file_loader import MAX_BYTES, SUPPORTED
 from app.services.knowledge_service import KnowledgeService
 from app.services.retrieval_service import RetrievalService
 
-router = APIRouter(prefix="/api/knowledge", tags=["conocimiento"])
+# Los invitados no ven documentos (ni de la casa ni personales).
+router = APIRouter(
+    prefix="/api/knowledge", tags=["conocimiento"], dependencies=[Depends(require_member)]
+)
 
 EMBEDDINGS_DOWN = "No se pudieron calcular los embeddings: ¿está Ollama encendido?"
 

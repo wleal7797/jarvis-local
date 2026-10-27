@@ -3,13 +3,12 @@
 import base64
 import io
 import wave
-from types import SimpleNamespace
 
 import httpx
 import pytest
 from fastapi.testclient import TestClient
 
-from app.core.dependencies import get_chat_service, get_current_user, get_memory_service, get_tts
+from app.core.dependencies import get_chat_service, get_memory_service, get_tts
 from app.main import create_app
 from app.services.speech_pipeline import stream_with_voice
 from app.services.tts_service import (
@@ -20,7 +19,7 @@ from app.services.tts_service import (
     SpeechError,
     clean_for_speech,
 )
-from tests.fakes import FakeMemory
+from tests.fakes import FakeMemory, as_owner
 
 pytestmark = pytest.mark.anyio
 
@@ -201,7 +200,7 @@ class StubChat:
 
 def ws_client(tts: StubTTS) -> TestClient:
     app = create_app()
-    app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(id=1)
+    as_owner(app)
     app.dependency_overrides[get_chat_service] = lambda: StubChat()
     app.dependency_overrides[get_memory_service] = lambda: FakeMemory()
     app.dependency_overrides[get_tts] = lambda: tts
@@ -234,7 +233,7 @@ def test_websocket_sin_voz_no_genera_audio():
 
 async def test_endpoint_speak_devuelve_wav():
     app = create_app()
-    app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(id=1)
+    as_owner(app)
     app.dependency_overrides[get_tts] = lambda: StubTTS()
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
@@ -282,3 +281,52 @@ def test_no_acepta_voces_no_instaladas_ni_velocidades_raras(tmp_path):
         tts.configure(voice="es_XX-nadie-low")
     with pytest.raises(SpeechError, match="velocidad"):
         tts.configure(length_scale=5)
+
+
+def test_efecto_pelicula_cambia_el_sonido_sin_cambiar_la_duracion():
+    import numpy as np
+
+    from app.services.tts_service import apply_effect
+
+    rate = 22050
+    tone_ = (np.sin(np.arange(rate) * 2 * np.pi * 220 / rate) * 8000).astype(np.int16)
+    buffer = io.BytesIO()
+    with wave.open(buffer, "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(rate)
+        w.writeframes(tone_.tobytes())
+    original = buffer.getvalue()
+
+    assert apply_effect(original, "ninguno") == original
+    processed = apply_effect(original, "pelicula")
+    assert processed != original
+    with wave.open(io.BytesIO(processed)) as w:
+        assert w.getnframes() == rate and w.getframerate() == rate
+
+
+def test_no_acepta_efectos_desconocidos(tmp_path):
+    from app.services.tts_service import PiperSettings, PiperTTS, SpeechError
+
+    tts = PiperTTS(PiperSettings(voices_dir=str(tmp_path)))
+    tts.configure(effect="pelicula")
+    assert tts.effect == "pelicula"
+    with pytest.raises(SpeechError):
+        tts.configure(effect="robot")
+
+
+def test_pelicula_grave_baja_el_tono_sin_cambiar_la_duracion():
+    from app.services.tts_service import lower_pitch, pitch_factor
+
+    rate = 22050
+    buffer = io.BytesIO()
+    with wave.open(buffer, "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(rate)
+        w.writeframes(b"\x00\x10" * rate)
+    factor = pitch_factor("pelicula_grave")
+    assert factor > 1 and pitch_factor("pelicula") == 1.0
+    with wave.open(io.BytesIO(lower_pitch(buffer.getvalue(), factor))) as w:
+        # Se estira; como Piper habló `factor` veces más rápido, la duración final no cambia.
+        assert w.getnframes() == int(rate * factor)

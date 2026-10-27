@@ -16,6 +16,7 @@ import asyncio
 import contextlib
 import logging
 import socket
+from pathlib import Path
 
 import numpy as np
 
@@ -110,7 +111,9 @@ async def run(args: argparse.Namespace) -> None:
     from openwakeword.vad import VAD
 
     settings = get_settings()
-    client = JarvisClient(f"http://127.0.0.1:{settings.api_port}")
+    token_file = Path(settings.agent_token_file)
+    token = token_file.read_text(encoding="utf-8").strip() if token_file.exists() else None
+    client = JarvisClient(f"http://127.0.0.1:{settings.api_port}", token)
     if not await client.healthy():
         status("La API no responde. Enciéndela primero: .\\scripts\\jarvis.ps1 iniciar")
         return

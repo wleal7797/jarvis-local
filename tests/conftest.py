@@ -5,7 +5,12 @@ docker/postgres/init), nunca la base real. Si PostgreSQL no está corriendo,
 esas pruebas se saltan con un aviso en lugar de fallar.
 """
 
-import asyncio
+import os
+
+# Las pruebas entran como el dueño sin contraseña; test_auth.py lo prueba encendido.
+os.environ["AUTH_ENABLED"] = "false"
+
+import asyncio  # noqa: E402
 from collections.abc import AsyncIterator
 
 import pytest

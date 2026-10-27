@@ -9,6 +9,7 @@
   const select = $("voice-select");
   const speed = $("speed");
   const speedValue = $("speed-value");
+  const effect = $("voice-effect");
   const message = $("voice-message");
   if (!dialog) return;
 
@@ -41,6 +42,7 @@
         select.appendChild(option);
       });
       speed.value = data.length_scale;
+      if (effect) effect.value = data.effect || "ninguno";
       speedValue.textContent = describeSpeed(data.length_scale);
     } catch (_) {
       show("No se pudieron cargar las voces.", true);
@@ -51,7 +53,11 @@
     const response = await fetch("/api/voice/settings", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ voice: select.value, length_scale: Number(speed.value) }),
+      body: JSON.stringify({
+        voice: select.value,
+        length_scale: Number(speed.value),
+        effect: effect ? effect.value : undefined,
+      }),
     });
     const body = await response.json();
     if (!response.ok) throw new Error(body.detail || response.statusText);
@@ -76,6 +82,7 @@
   }
 
   speed.addEventListener("input", () => (speedValue.textContent = describeSpeed(speed.value)));
+  if (effect) effect.addEventListener("change", () => save().then(() => show("Efecto guardado. Pruébelo.")).catch((e) => show(e.message, true)));
   select.addEventListener("change", () => save().then(() => show("Voz cambiada.")).catch((e) => show(e.message, true)));
   speed.addEventListener("change", () => save().then(() => show("Velocidad guardada.")).catch((e) => show(e.message, true)));
   $("voice-test").addEventListener("click", test);
