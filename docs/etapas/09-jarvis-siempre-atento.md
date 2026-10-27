@@ -13,7 +13,9 @@ Hablarle sin tocar nada: *"Jarvis, ¿cómo estás?"* y responde por los parlante
 .\scripts\jarvis.ps1 detener            # apaga también el micrófono
 ```
 
-Diga **"Jarvis, …"** (pronunciado *"Yarbis"*). Suena un aviso corto, JARVIS responde por los parlantes y **sigue escuchando 8 segundos**: puede seguir hablando sin decir su nombre. Para interrumpirlo mientras habla, diga **"Jarvis"**. Lo que pasa queda en `logs\voz.log`:
+> **Cambio en la Etapa 10:** el modo conversación quedó **apagado** por defecto: toda frase tiene que **empezar** con "Jarvis". En casa respondía a lo que se hablaba en el cuarto. Ver [bitácora de la Etapa 10](10-memoria.md#solo-responde-si-la-frase-empieza-con-jarvis).
+
+Diga **"Jarvis, …"** (pronunciado *"Yarbis"*). Suena un aviso corto, JARVIS responde por los parlantes y **sigue escuchando 8 segundos** (sólo con `--seguir 8`): puede seguir hablando sin decir su nombre. Para interrumpirlo mientras habla, diga **"Jarvis"**. Lo que pasa queda en `logs\voz.log`:
 
 ```
 En espera. Diga "Jarvis, …"

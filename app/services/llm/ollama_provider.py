@@ -51,6 +51,31 @@ class OllamaProvider:
             logger.error("Fallo al hablar con Ollama", extra={"error": str(exc)})
             raise LLMError("No se pudo conectar con Ollama") from exc
 
+    async def complete(
+        self,
+        messages: list[ChatMessage],
+        *,
+        model: str | None = None,
+        options: dict[str, Any] | None = None,
+        json_schema: dict[str, Any] | None = None,
+    ) -> str:
+        payload: dict[str, Any] = {
+            "model": model or self._default_model,
+            "messages": [{"role": m.role, "content": m.content} for m in messages],
+            "stream": False,
+        }
+        if options:
+            payload["options"] = options
+        if json_schema:
+            payload["format"] = json_schema
+        try:
+            response = await self._http.post(f"{self._base_url}/api/chat", json=payload)
+        except httpx.HTTPError as exc:
+            raise LLMError("No se pudo conectar con Ollama") from exc
+        if response.status_code != 200:
+            raise LLMError(f"Ollama respondió {response.status_code}: {response.text}")
+        return response.json().get("message", {}).get("content", "")
+
     async def warm(self, keep_alive: str = "10m", prefill: bool = False) -> None:
         """Sin prompt, Ollama sólo carga el modelo (o renueva su tiempo en memoria).
 

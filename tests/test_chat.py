@@ -1,13 +1,11 @@
 """Pruebas del chat: servicio y endpoints, con base de datos real y modelo falso."""
 
 import json
-from collections.abc import AsyncIterator
 
 import httpx
 import pytest
-from sqlalchemy import select, text
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.pool import NullPool
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.dependencies import get_embedder, get_llm, get_session_factory
 from app.main import create_app
@@ -64,7 +62,10 @@ async def test_el_historial_llega_al_modelo(session_factory: async_sessionmaker,
     await run(service, user, "¿Cómo me llamo?", conversation_id)
 
     sent = [(m.role, m.content) for m in llm.calls[-1]]
-    assert sent == [
+    # Primero la fecha de hoy (fija todo el día), luego el historial y la pregunta.
+    assert sent[0][0] == "user" and sent[0][1].startswith("Hoy es ")
+    assert sent[1:] == [
+        ("assistant", "Entendido, lo tengo presente."),
         ("user", "Me llamo Ana"),
         ("assistant", "Entendido."),
         ("user", "¿Cómo me llamo?"),
@@ -96,30 +97,6 @@ async def test_si_el_modelo_falla_avisa_y_no_guarda_respuesta(
 
 
 # ---------- Endpoints ----------
-
-
-@pytest.fixture
-async def app_session_factory(test_db_url: str) -> AsyncIterator[async_sessionmaker]:
-    """Conexiones reales (una por petición, como en producción) a la base de pruebas.
-
-    Al compartir una sola conexión, FastAPI cerraría la sesión de una petición mientras
-    empieza la siguiente. Por eso aquí cada sesión tiene su conexión y al final se vacían
-    las tablas.
-    """
-    engine = create_async_engine(test_db_url, poolclass=NullPool)
-    factory = async_sessionmaker(engine, expire_on_commit=False)
-    async with factory() as session:
-        session.add_all(
-            [
-                User(username="dueno", display_name="Dueño", password_hash="!", role="owner"),
-                ModelVersion(ollama_tag=MODEL, base_model="Qwen3", kind="base"),
-            ]
-        )
-        await session.commit()
-    yield factory
-    async with engine.begin() as conn:
-        await conn.execute(text("TRUNCATE users, model_versions RESTART IDENTITY CASCADE"))
-    await engine.dispose()
 
 
 @pytest.fixture

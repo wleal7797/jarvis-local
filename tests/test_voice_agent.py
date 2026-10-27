@@ -62,6 +62,9 @@ def test_corta_frases_demasiado_largas():
         ("Jarvis, ¿cómo estás?", True),
         ("Hola Jarvis, ¿qué hora es?", True),
         ("Oye, Yarbis, apaga eso", True),  # se corrige a Jarvis
+        ("Yarbis", True),
+        ("Le dije a Jarvis que no", False),  # habla de él, no lo llama
+        ("Entonces el doctor Jarvis dijo que sí", False),
         ("¿Qué puerto usa la base de datos de JARVIS?", False),  # habla de él, no lo llama
         ("Pon música tranquila", False),
     ],
@@ -199,12 +202,22 @@ async def test_lo_llaman_transcribe_una_sola_vez_responde_y_habla():
     assert client.sent == [("Jarvis, ¿cómo estás?", None)]
     assert player.chimes == 1 and player.queued == ["Muy bien, gracias."]
     assert agent.conversation.conversation_id == 42
-    assert notes.states == ["pensando", "hablando", "atento"]
+    assert notes.states == ["pensando", "hablando", "en_espera"]
+
+
+async def test_por_defecto_siempre_hay_que_decir_su_nombre():
+    client = FakeClient("¿Y mañana?")
+    agent = VoiceAgent(None, client, FakePlayer())
+    agent.conversation.started_conversation(42)
+    agent.conversation.finished_speaking()  # acaba de responder
+    assert await agent.handle(UTTERANCE) == "ignorada"
+    assert client.sent == []
 
 
 async def test_en_modo_conversacion_no_hace_falta_el_nombre():
     client, notes = FakeClient("¿Y mañana?"), Notes()
-    agent = VoiceAgent(None, client, FakePlayer(), notify=notes)
+    conversation = Conversation(ConversationSettings(follow_up_seconds=8))
+    agent = VoiceAgent(None, client, FakePlayer(), conversation, notify=notes)
     agent.conversation.started_conversation(42)
     agent.conversation.finished_speaking()  # acaba de responder: escuchando
 
@@ -226,7 +239,7 @@ async def test_mientras_busca_en_documentos_lo_dice_y_lo_muestra():
     agent = VoiceAgent(None, client, player, notify=notes, searching_wav=wav_bytes())
     assert await agent.handle(UTTERANCE) == "respondida"
     assert player.queued == ["Un momento, lo consulto.", "Gabriel García Márquez."]
-    assert notes.states == ["pensando", "buscando", "hablando", "atento"]
+    assert notes.states == ["pensando", "buscando", "hablando", "en_espera"]
 
 
 async def test_al_terminar_la_frase_de_espera_sigue_atendiendo():
@@ -268,7 +281,7 @@ async def test_interrumpirlo_diciendo_su_nombre():
 
 async def test_su_propia_voz_no_lo_interrumpe():
     player = FakePlayer(playing=True)
-    sentence = "Soy Jarvis y estoy aquí para ayudarle con lo que necesite."
+    sentence = "Jarvis está aquí para ayudarle con lo que necesite."
     agent = VoiceAgent(None, FakeClient(sentence), player)
     agent.conversation.speaking(sentence)
 

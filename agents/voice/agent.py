@@ -172,20 +172,28 @@ class VoiceAgent:
             )
             self.last_timings = timings
             if not self.player.playing:
-                self.conversation.finished_speaking()
-                self.notify("atento", "")
+                self.on_player_idle_now()
             return "respondida"
 
     def _failed(self, result: str) -> str:
         self.player.chime(CHIME_ERROR)
-        self.conversation.finished_speaking()
-        self.notify("atento", "")
+        self.on_player_idle_now()
         return result
+
+    def on_player_idle_now(self) -> None:
+        """Terminó (o no hubo nada que decir): vuelve a esperar."""
+        self.conversation.finished_speaking()
+        waiting = self.conversation.settings.follow_up_seconds <= 0
+        self.notify("en_espera" if waiting else "atento", "")
 
     def on_player_idle(self) -> None:
         """La llama el reproductor cuando termina de hablar."""
         if self.busy:  # terminó "Un momento, lo consulto", pero la respuesta aún no llega
             return
         self.conversation.finished_speaking()
-        self.notify("atento", "")
-        status(f"Le sigo escuchando {self.conversation.settings.follow_up_seconds:.0f} s…")
+        seconds = self.conversation.settings.follow_up_seconds
+        if seconds > 0:
+            self.notify("atento", "")
+            status(f"Le sigo escuchando {seconds:.0f} s…")
+        else:
+            self.notify("en_espera", "")

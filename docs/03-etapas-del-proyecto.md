@@ -166,7 +166,7 @@ flowchart LR
 ---
 
 ## Etapa 9 · "Jarvis" siempre atento y conversación fluida
-**Tecnología:** Silero VAD + Whisper `base` para reconocer "Jarvis" ("Yarbis") · openWakeWord `hey_jarvis` como opción · `sounddevice`.
+**Tecnología:** Silero VAD + Whisper `small` en la GPU para reconocer "Jarvis" ("Yarbis") · openWakeWord `hey_jarvis` como opción · `sounddevice`.
 **Objetivo:** hablarle sin tocar nada. Dices *"Jarvis, ¿cómo estás?"* y responde por los parlantes, como en una conversación.
 
 **Entregables** · ✅ [bitácora](etapas/09-jarvis-siempre-atento.md)
@@ -187,13 +187,14 @@ flowchart LR
 
 > Se adelantó (antes era la Etapa 11) porque recordar es parte de una conversación natural.
 
-**Entregables**
-- `MemoryService`: JARVIS detecta y guarda datos importantes que le cuentas ("mi cumpleaños es…", "me gusta el café sin azúcar") y los recuerda en conversaciones futuras.
-- Panel "Memoria": ver, corregir y borrar lo que JARVIS recuerda de ti.
-- Documentos personales (ya funcionan desde la Etapa 6) integrados en la memoria.
-- Botones 👍 / 👎 en cada respuesta, con un campo para escribir la respuesta correcta; las correcciones se vuelven ejemplos de entrenamiento (`training_examples`).
+**Entregables** · ✅ [bitácora](etapas/10-memoria.md) · **10/10 datos recordados en otra conversación, 0/8 falsos recuerdos** ([evaluación](etapas/10-evaluacion-memoria.md))
+- [x] `MemoryService`: JARVIS detecta y guarda datos importantes que le cuentas ("mi cumpleaños es…", "me gusta el café sin azúcar") y los recuerda en conversaciones futuras.
+- [x] Panel "Memoria": ver, agregar, corregir y borrar lo que JARVIS recuerda de ti.
+- [x] Documentos personales (ya funcionan desde la Etapa 6) junto a la memoria: con documentos, los recuerdos más parecidos a la pregunta van a su lado.
+- [x] Botones 👍 / 👎 en cada respuesta, con un campo para escribir la respuesta correcta; las correcciones se vuelven ejemplos de entrenamiento (`training_examples`).
+- [x] Extra: dice la fecha y la hora (reloj del PC).
 
-**Terminado cuando:** le cuentas algo por voz, cierras la conversación, abres otra, y lo recuerda.
+**Terminado cuando:** le cuentas algo por voz, cierras la conversación, abres otra, y lo recuerda. ✅ "¿Cómo se llama mi perro y de qué raza es?" → *"Su perro se llama Rocky y es un beagle."*
 
 ---
 

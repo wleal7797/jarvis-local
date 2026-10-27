@@ -23,8 +23,10 @@ from app.services.embedding_service import Embedder, OllamaEmbedder
 from app.services.health_service import DatabaseProbe, HealthService
 from app.services.ingestion import IngestionService
 from app.services.llm import LLMProvider, OllamaProvider
+from app.services.memory_service import MemoryService
 from app.services.retrieval_service import RetrievalService, RetrievalSettings
 from app.services.stt_service import SpeechToText
+from app.services.training_service import TrainingService
 from app.services.tts_service import TextToSpeech
 from app.services.voice_status import VoiceStatusHub
 
@@ -98,11 +100,38 @@ def retrieval_settings(settings: Settings) -> RetrievalSettings:
     )
 
 
+def get_memory_service(
+    settings: SettingsDep,
+    factory: SessionFactoryDep,
+    llm: Annotated[LLMProvider, Depends(get_llm)],
+    embedder: EmbedderDep,
+) -> MemoryService:
+    return MemoryService(
+        factory,
+        llm,
+        embedder,
+        settings.ollama_chat_model,
+        budget=settings.memory_token_budget,
+        learning=settings.memory_enabled,
+    )
+
+
+MemoryServiceDep = Annotated[MemoryService, Depends(get_memory_service)]
+
+
+def get_training_service(factory: SessionFactoryDep) -> TrainingService:
+    return TrainingService(factory)
+
+
+TrainingServiceDep = Annotated[TrainingService, Depends(get_training_service)]
+
+
 def get_chat_service(
     settings: SettingsDep,
     factory: SessionFactoryDep,
     llm: Annotated[LLMProvider, Depends(get_llm)],
     embedder: EmbedderDep,
+    memory: MemoryServiceDep,
 ) -> ChatService:
     retriever_factory = None
     if settings.rag_enabled:
@@ -118,6 +147,7 @@ def get_chat_service(
         retriever_factory,
         voice_context_tokens=settings.rag_voice_context_tokens,
         voice_max_tokens=settings.voice_max_tokens,
+        memory=memory if settings.memory_enabled else None,
     )
 
 

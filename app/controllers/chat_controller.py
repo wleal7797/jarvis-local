@@ -1,18 +1,27 @@
 """Controlador del chat: conversar con JARVIS y consultar el historial."""
 
 import asyncio
+import contextlib
 import json
 import logging
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable, Callable
 
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect, status
 from fastapi.responses import StreamingResponse
 from pydantic import ValidationError
 
-from app.core.dependencies import ChatServiceDep, CurrentUserDep, SessionDep, TextToSpeechDep
+from app.core.dependencies import (
+    ChatServiceDep,
+    CurrentUserDep,
+    MemoryServiceDep,
+    SessionDep,
+    TextToSpeechDep,
+)
 from app.repositories import ConversationRepository
+from app.repositories.training_repository import TrainingRepository
 from app.schemas.chat import ChatIn, ConversationOut, MessageOut
 from app.services.chat_service import ChatEvent, ConversationNotFoundError
+from app.services.memory_service import Learned, MemoryService
 from app.services.speech_pipeline import stream_with_voice
 
 logger = logging.getLogger(__name__)
@@ -23,9 +32,54 @@ ws_router = APIRouter(tags=["chat"])
 NOT_FOUND = "Conversación no encontrada"
 
 
-async def _ndjson(events: AsyncIterator[ChatEvent]) -> AsyncIterator[str]:
+# Tareas de "¿hay algo que recordar?" que siguen corriendo después de responder.
+_learning: set[asyncio.Task] = set()
+
+
+def memory_event(learned: Learned) -> ChatEvent:
+    return {
+        "type": "memory",
+        "memory_id": learned.memory_id,
+        "content": learned.content,
+        "updated": learned.updated,
+    }
+
+
+async def _tap_end(events: AsyncIterator[ChatEvent], seen: dict) -> AsyncIterator[ChatEvent]:
+    """Deja pasar los eventos y anota el id de la respuesta cuando termina."""
     async for event in events:
+        if event["type"] == "end":
+            seen["message_id"] = event["message_id"]
+        yield event
+
+
+def learn_later(
+    memory: MemoryService,
+    user_id: int,
+    message_id: int,
+    send: Callable[[ChatEvent], Awaitable[None]],
+) -> None:
+    """Revisa en segundo plano si hay algo que recordar (no demora la respuesta)."""
+
+    async def run() -> None:
+        for learned in await memory.learn(user_id, message_id):
+            with contextlib.suppress(Exception):  # el navegador pudo haberse ido
+                await send(memory_event(learned))
+
+    task = asyncio.create_task(run())
+    _learning.add(task)
+    task.add_done_callback(_learning.discard)
+
+
+async def _ndjson(
+    events: AsyncIterator[ChatEvent], memory: MemoryService | None, user_id: int
+) -> AsyncIterator[str]:
+    seen: dict = {}
+    async for event in _tap_end(events, seen):
         yield json.dumps(event, ensure_ascii=False) + "\n"
+    if memory is not None and "message_id" in seen:
+        for learned in await memory.learn(user_id, seen["message_id"]):
+            yield json.dumps(memory_event(learned), ensure_ascii=False) + "\n"
 
 
 @router.post(
@@ -33,10 +87,12 @@ async def _ndjson(events: AsyncIterator[ChatEvent]) -> AsyncIterator[str]:
     summary="Enviar un mensaje a JARVIS (respuesta en streaming)",
     response_description=(
         "NDJSON: una línea por evento. `start` (ids), varios `token` (texto), "
-        "`end` (estadísticas) o `error`."
+        "`end` (estadísticas) o `error`. Si aprendió algo de usted, al final llega `memory`."
     ),
 )
-async def chat(body: ChatIn, user: CurrentUserDep, service: ChatServiceDep) -> StreamingResponse:
+async def chat(
+    body: ChatIn, user: CurrentUserDep, service: ChatServiceDep, memory: MemoryServiceDep
+) -> StreamingResponse:
     # Se valida antes de empezar a transmitir: después ya no se puede devolver un 404.
     if body.conversation_id is not None:
         try:
@@ -45,7 +101,7 @@ async def chat(body: ChatIn, user: CurrentUserDep, service: ChatServiceDep) -> S
             raise HTTPException(status.HTTP_404_NOT_FOUND, NOT_FOUND) from None
 
     events = service.answer(user.id, body.message, body.conversation_id)
-    return StreamingResponse(_ndjson(events), media_type="application/x-ndjson")
+    return StreamingResponse(_ndjson(events, memory, user.id), media_type="application/x-ndjson")
 
 
 @router.get("/conversations", response_model=list[ConversationOut], summary="Mis conversaciones")
@@ -63,9 +119,13 @@ async def list_messages(conversation_id: int, user: CurrentUserDep, session: Ses
     if await repo.get_for_user(conversation_id, user.id) is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, NOT_FOUND)
     messages = await repo.messages(conversation_id)
-    sources = await repo.sources_for([m.id for m in messages])
+    ids = [m.id for m in messages]
+    sources = await repo.sources_for(ids)
+    ratings = await TrainingRepository(session).ratings_for(ids)
     return [
-        MessageOut.model_validate(m).model_copy(update={"sources": sources.get(m.id, [])})
+        MessageOut.model_validate(m).model_copy(
+            update={"sources": sources.get(m.id, []), "rating": ratings.get(m.id)}
+        )
         for m in messages
     ]
 
@@ -85,13 +145,18 @@ async def delete_conversation(conversation_id: int, user: CurrentUserDep, sessio
 
 @ws_router.websocket("/ws/chat")
 async def chat_ws(
-    websocket: WebSocket, user: CurrentUserDep, service: ChatServiceDep, tts: TextToSpeechDep
+    websocket: WebSocket,
+    user: CurrentUserDep,
+    service: ChatServiceDep,
+    tts: TextToSpeechDep,
+    memory: MemoryServiceDep,
 ) -> None:
     """Chat en vivo para la vista web.
 
     El navegador envía `{"message": "...", "conversation_id": 1 | null, "voice": true}` y recibe
     los mismos eventos que `POST /api/chat` (`start`, `sources`, `token`, `end`, `error`).
     Con `"voice": true` llegan además `audio` (una frase hablada, WAV en base64) y `audio_end`.
+    Si después de responder aprende algo de usted, llega `memory` (Etapa 10).
     La conexión queda abierta para seguir conversando.
     """
     await websocket.accept()
@@ -115,11 +180,17 @@ async def chat_ws(
                 except ConversationNotFoundError:
                     await websocket.send_json({"type": "error", "message": NOT_FOUND})
                     continue
-            events = service.answer(user.id, body.message, body.conversation_id, voice=body.voice)
+            seen: dict = {}
+            events = _tap_end(
+                service.answer(user.id, body.message, body.conversation_id, voice=body.voice),
+                seen,
+            )
             if body.voice:
                 await stream_with_voice(events, tts, send)
             else:
                 async for event in events:
                     await send(event)
+            if "message_id" in seen:
+                learn_later(memory, user.id, seen["message_id"], send)
     except WebSocketDisconnect:
         logger.info("WebSocket cerrado por el navegador")

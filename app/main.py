@@ -20,6 +20,7 @@ from app.controllers import (
     health_controller,
     knowledge_controller,
     page_controller,
+    training_controller,
     voice_controller,
 )
 from app.core.config import get_settings
@@ -113,6 +114,7 @@ def create_app() -> FastAPI:
     app.include_router(knowledge_controller.router)
     app.include_router(voice_controller.router)
     app.include_router(voice_controller.ws_router)
+    app.include_router(training_controller.router)
     return app
 
 

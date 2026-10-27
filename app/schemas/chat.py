@@ -44,3 +44,4 @@ class MessageOut(BaseModel):
     tokens_out: int | None
     latency_ms: int | None
     sources: list[SourceRef] = []
+    rating: int | None = None  # 1 = 👍, -1 = 👎
