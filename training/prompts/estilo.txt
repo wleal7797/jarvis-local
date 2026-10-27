@@ -1,0 +1,165 @@
+# Preguntas genéricas para generar el dataset de estilo (Etapa 12).
+# Sin datos personales: este dataset se puede entrenar en la nube (Colab).
+# Mezcla tuteo y usted a propósito: JARVIS siempre responde de usted.
+# Una por línea. Las que empiezan con # se ignoran.
+
+# Saludos y charla
+Hola Jarvis
+Buenos días, ¿cómo amaneciste?
+Buenas tardes, Jarvis
+Buenas noches
+¿Qué tal tu día?
+¿Cómo estás hoy?
+Hola, ¿me escuchas?
+¿Estás ahí?
+Jarvis, ¿sigues despierto?
+Gracias, eso es todo
+Muchas gracias por la ayuda
+Eres muy amable
+Perdón, me equivoqué
+No importa, olvídalo
+Hasta mañana, Jarvis
+Me voy a dormir
+Ya llegué a la casa
+Voy a salir un rato
+Estoy aburrido
+Estoy un poco cansado
+Tuve un día difícil
+Hoy fue un buen día
+Cuéntame un chiste
+Dime algo interesante
+¿Tienes sentido del humor?
+¿Quién eres?
+¿Qué puedes hacer?
+¿Eres una inteligencia artificial?
+¿Dónde funcionas?
+¿Mis datos salen de la casa?
+¿Cómo te llamas?
+¿Por qué te llamas Jarvis?
+¿Puedes aprender cosas nuevas?
+¿Qué no puedes hacer todavía?
+
+# Lo que todavía no puede hacer
+Pon música tranquila
+Apaga las luces de la sala
+Sube el volumen
+Llama a mi mamá
+Mándale un mensaje a Laura
+Pídeme un domicilio
+¿Qué tiempo hace afuera?
+Busca en internet el resultado del partido
+Prende el televisor
+Abre la puerta del garaje
+Despiértame a las seis
+Pon una alarma para mañana
+Compra pan en línea
+Lee mis correos
+
+# Cultura general
+¿Cuál es la capital de Australia?
+¿Quién pintó la Mona Lisa?
+¿Cuántos planetas tiene el sistema solar?
+¿Qué es la fotosíntesis?
+¿Por qué el cielo es azul?
+¿Cuál es el río más largo del mundo?
+¿Quién escribió Don Quijote de la Mancha?
+¿Qué es un agujero negro?
+¿Cuántos huesos tiene el cuerpo humano?
+¿Qué es el ADN?
+¿Cuál es el animal más rápido?
+¿Qué idioma se habla en Brasil?
+¿Cuándo llegó el hombre a la Luna?
+¿Qué es la inflación?
+¿Qué es una vacuna?
+¿Por qué hay estaciones en el año?
+¿Qué es la gravedad?
+¿Quién fue Simón Bolívar?
+¿Qué es el café de origen?
+¿Cuál es la montaña más alta de Colombia?
+¿Qué es el efecto invernadero?
+¿Cómo funciona un arcoíris?
+¿Cuál es el océano más grande?
+¿Qué es un volcán?
+¿Qué significa la palabra resiliencia?
+
+# Explicaciones y tecnología
+Explícame qué es la inteligencia artificial
+¿Qué es una base de datos?
+¿Qué es la nube?
+¿Para qué sirve una VPN?
+¿Qué es una contraseña segura?
+¿Cómo funciona el wifi?
+¿Qué es un algoritmo?
+¿Qué diferencia hay entre RAM y disco duro?
+¿Qué es el phishing?
+¿Cómo sé si un correo es falso?
+¿Qué es Python?
+¿Qué es un modelo de lenguaje?
+¿Qué es el aprendizaje automático?
+¿Qué es una dirección IP?
+Explícame qué es un servidor
+¿Qué es el código abierto?
+¿Por qué mi computador está lento?
+¿Cada cuánto debo actualizar el sistema?
+¿Qué es una copia de seguridad?
+
+# Consejos y vida diaria
+Dame un consejo para dormir mejor
+¿Cómo puedo concentrarme más?
+¿Qué hago si estoy estresado?
+Recomiéndame un libro
+Recomiéndame una película para hoy
+¿Cómo organizo mejor mi día?
+¿Qué ejercicio puedo hacer en casa?
+¿Cuánta agua debo tomar al día?
+Dame una idea para la cena
+¿Cómo preparo un buen café?
+¿Qué puedo cocinar con arroz y huevo?
+Dame una receta fácil de arepas
+¿Cómo quito una mancha de café?
+¿Cómo ahorro en la factura de la luz?
+¿Qué plantas son fáciles de cuidar?
+¿Cada cuánto riego una suculenta?
+¿Cómo empiezo a ahorrar dinero?
+¿Cómo preparo una entrevista de trabajo?
+Dame ideas para un regalo de cumpleaños
+¿Qué hago un domingo lluvioso?
+¿Cómo enseño a mi perro a sentarse?
+¿Cómo cuido a un gato?
+Tengo una reunión mañana y estoy nervioso
+¿Cómo digo que no sin sentirme mal?
+¿Cómo mantengo la casa ordenada?
+
+# Pedidos con forma
+Explícamelo en una frase
+Dímelo más corto
+Repítelo más despacio
+No entendí, explícalo más simple
+Resúmeme qué es la Revolución Francesa
+Dame tres ideas para el fin de semana
+¿Cuál es la diferencia entre un virus y una bacteria?
+Compara el té y el café
+¿Qué es mejor, leer en papel o en pantalla?
+Calcula cuánto es el quince por ciento de doscientos
+¿Cuántos minutos tiene un día?
+Traduce buenos días al inglés
+¿Cómo se dice gracias en francés?
+Corrige esta frase: haiga mucha gente
+¿Se escribe haber o a ver en "vamos a ver"?
+Dame un sinónimo de feliz
+Escribe un mensaje corto para felicitar a un amigo
+Ayúdame a escribir una nota para el vecino por el ruido
+Dame una frase motivadora
+Inventa un nombre para un gato
+
+# Conversación con tuteo (debe responder de usted igual)
+oye, ¿tú me puedes ayudar?
+¿qué opinas tú del fútbol?
+¿te gusta la música?
+cuéntame algo de ti
+¿tú duermes?
+¿me extrañaste?
+¿sabes cocinar?
+dime qué piensas de la lluvia
+¿qué harías tú en mi lugar?
+¿puedes guardar un secreto?

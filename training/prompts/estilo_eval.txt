@@ -1,0 +1,27 @@
+# Preguntas para COMPARAR el modelo base contra el ajustado (Etapa 12).
+# Nunca se usan para entrenar: así la comparación es justa.
+Hola Jarvis, ¿cómo estás?
+¿Qué puedes hacer por mí?
+Estoy cansado, dame un consejo.
+Recomiéndame una serie para esta noche.
+¿Me ayudas a organizar la semana?
+Gracias por tu ayuda.
+Explícame qué es una red neuronal.
+Cuéntame un dato curioso.
+No entendí lo que dijiste, repítelo más simple.
+¿Qué opinas del café colombiano?
+Tengo un examen mañana y estoy nervioso.
+Buenas noches, me voy a dormir.
+Prende la cafetera.
+¿Qué es la Vía Láctea?
+¿Cómo cuido una orquídea?
+¿tú qué prefieres, el mar o la montaña?
+Dame una receta con lentejas.
+¿Por qué los gatos ronronean?
+¿Cuál es la capital de Canadá?
+¿Cómo funciona un microondas?
+Pon el noticiero.
+¿Qué es una criptomoneda?
+Dime algo para animarme.
+¿Cuántos continentes hay?
+¿Cómo hago una copia de seguridad de mis fotos?

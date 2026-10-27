@@ -63,3 +63,6 @@ desktop.ini
 .jarvis-worker.pid
 .jarvis-voz.pid
 .jarvis-caddy.pid
+
+# Modelfiles generados por scripts.models (tienen rutas de este PC)
+ollama/generados/

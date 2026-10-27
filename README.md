@@ -104,7 +104,7 @@ flowchart LR
 | 9 | "Jarvis" siempre atento + conversación fluida | ✅ [bitácora](docs/etapas/09-jarvis-siempre-atento.md) |
 | 10 | Memoria: recuerda lo que le cuentas | ✅ [bitácora](docs/etapas/10-memoria.md) |
 | 11 | Seguridad y acceso en la red local | 🟡 [bitácora](docs/etapas/11-seguridad-red-local.md) · falta probar desde el celular |
-| 12 | Fine-tuning con LoRA | ⚪ |
+| 12 | Fine-tuning con LoRA | 🟡 [bitácora](docs/etapas/12-lora.md) · listo para entrenar en Colab |
 | 13 | Herramientas y versión 1.0 | ⚪ |
 
 ## Estructura del repositorio (objetivo)
