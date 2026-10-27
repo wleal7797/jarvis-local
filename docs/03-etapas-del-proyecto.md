@@ -245,7 +245,7 @@ flowchart LR
 - [x] README final y diagramas actualizados (C4, modelo relacional).
 - [x] Verificado **sin internet**: API y agente de voz con una guardia que bloquea toda conexión externa → 0 intentos.
 - [ ] Capturas y video corto de demostración (los graba el dueño).
-- [ ] Etiqueta `v1.0.0` y *release* en GitHub (al fusionar los PR, con el visto bueno del dueño).
+- [x] Etiqueta `v1.0.0` y [*release* en GitHub](https://github.com/wleal7797/jarvis-local/releases/tag/v1.0.0).
 
 **Terminado cuando:** todas las pruebas pasan y JARVIS funciona completo **sin conexión a internet**.
 

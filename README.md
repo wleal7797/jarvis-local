@@ -32,7 +32,26 @@ ollama create jarvis:base -f ollama/Modelfile   # personalidad de JARVIS
 
 Requisitos previos: ver la [guía de instalación](docs/04-instalacion-paso-a-paso.md).
 
-Día a día: `.\scripts\jarvis.ps1 iniciar` · `detener` (libera RAM y GPU) · `estado`.
+## Encender y apagar
+
+Abra **PowerShell** en la carpeta del proyecto (la que tiene este `README.md`). Por ejemplo: en el Explorador de archivos, entre a la carpeta, escriba `powershell` en la barra de direcciones y presione Enter. O, desde cualquier PowerShell: `cd "ruta\de\la\carpeta"`.
+
+```powershell
+.\scripts\jarvis.ps1 iniciar     # enciende todo: base de datos, modelo, API, micrófono y HTTPS
+.\scripts\jarvis.ps1 detener     # apaga todo y libera la memoria RAM y la tarjeta gráfica
+.\scripts\jarvis.ps1 estado      # qué está encendido y cuánta memoria queda
+```
+
+Al encender muestra las direcciones: `http://localhost:8000` en este PC y `https://<ip-del-pc>` desde el celular (si Caddy está instalado, ver [docs/02](docs/02-acceso-desde-la-red-local.md)).
+
+| Opción | Para qué |
+|---|---|
+| `iniciar -SinVoz` | Sin el micrófono siempre atento |
+| `iniciar -SinRed` | Sin HTTPS: sólo en este PC |
+| `iniciar -Gpu` | El worker indexa documentos en la GPU (más rápido, para la noche) |
+| `detener -TodoDocker` | Además apaga Docker y WSL (libera ~2 GB más; detiene otros contenedores) |
+
+Si PowerShell dice que *la ejecución de scripts está deshabilitada*, use: `powershell -ExecutionPolicy Bypass -File .\scripts\jarvis.ps1 iniciar`
 
 ---
 
