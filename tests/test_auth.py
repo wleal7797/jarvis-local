@@ -202,3 +202,53 @@ async def test_usuarios_invalidos(app_session_factory, auth):
         ]
         for body in cases:
             assert (await owner.post("/api/users", json=body)).status_code == 422
+
+
+class CountingFactory:
+    """Fábrica de sesiones falsa que cuenta cuántas siguen abiertas."""
+
+    def __init__(self, user) -> None:
+        self.user = user
+        self.open = 0
+        self.opened = 0
+
+    def __call__(self):
+        factory = self
+
+        class FakeSession:
+            async def __aenter__(self):
+                factory.open += 1
+                factory.opened += 1
+                return self
+
+            async def __aexit__(self, *exc):
+                factory.open -= 1
+
+            async def scalar(self, _stmt):
+                return factory.user
+
+            async def get(self, _model, _id):
+                return factory.user
+
+        return FakeSession()
+
+
+async def test_los_websocket_no_ocupan_conexiones():
+    """El error del 26 oct: cada WebSocket dejaba ocupada una conexión mientras la
+    página estaba abierta, y con varias pestañas se acababan (QueuePool limit)."""
+    from types import SimpleNamespace
+
+    from app.core.dependencies import get_optional_user
+
+    owner = SimpleNamespace(id=1, role="owner", is_active=True)
+    factory = CountingFactory(owner)
+    conn = SimpleNamespace(
+        headers={"authorization": f"Bearer {AGENT_TOKEN}"},
+        cookies={},
+        app=SimpleNamespace(state=SimpleNamespace(agent_token=AGENT_TOKEN)),
+    )
+    for settings in (Settings(auth_enabled=True), Settings(auth_enabled=False)):
+        user = await get_optional_user(conn, settings, factory, None)
+        assert user is owner
+        assert factory.open == 0  # la consulta terminó y la conexión quedó libre
+    assert factory.opened == 2

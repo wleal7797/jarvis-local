@@ -13,7 +13,12 @@ from sqlalchemy.ext.asyncio import (
 
 def create_engine(url: str) -> AsyncEngine:
     # Pocas conexiones: es un PC de casa con 8 GB de RAM, no un servidor con miles de usuarios.
-    return create_async_engine(url, pool_size=5, max_overflow=5, pool_pre_ping=True)
+    # pool_timeout 10 s: si se acabaran, la petición falla pronto en vez de colgar 30 s.
+    # Ninguna conexión debe quedar ocupada mientras una página está abierta (ver
+    # get_optional_user y la prueba test_los_websocket_no_ocupan_conexiones).
+    return create_async_engine(
+        url, pool_size=5, max_overflow=5, pool_timeout=10, pool_pre_ping=True
+    )
 
 
 def create_session_factory(engine: AsyncEngine) -> async_sessionmaker[AsyncSession]:

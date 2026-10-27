@@ -1,5 +1,6 @@
 """Habla con la API de JARVIS: transcribir (Whisper small) y conversar (WebSocket con voz)."""
 
+import asyncio
 import base64
 import contextlib
 import json
@@ -8,6 +9,9 @@ from typing import Any
 
 import httpx
 import websockets
+
+# Sin noticias de la API durante este tiempo = algo falló: se avisa y se sigue escuchando.
+RECV_TIMEOUT = 90
 
 
 class JarvisClient:
@@ -59,7 +63,7 @@ class JarvisClient:
             payload = {"message": text, "conversation_id": conversation_id, "voice": True}
             await ws.send(json.dumps(payload))
             while True:
-                event = json.loads(await ws.recv())
+                event = json.loads(await asyncio.wait_for(ws.recv(), RECV_TIMEOUT))
                 if event["type"] == "audio":
                     event["wav"] = base64.b64decode(event.pop("audio"))
                 yield event

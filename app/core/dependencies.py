@@ -161,8 +161,9 @@ def get_auth_service(conn: HTTPConnection) -> AuthService | None:
 AuthServiceDep = Annotated[AuthService | None, Depends(get_auth_service)]
 
 
-async def _owner(settings: Settings, session: AsyncSession) -> User:
-    user = await UserRepository(session).get_by_username(settings.default_username)
+async def _owner(settings: Settings, factory: async_sessionmaker[AsyncSession]) -> User:
+    async with factory() as session:
+        user = await UserRepository(session).get_by_username(settings.default_username)
     if user is None or not user.is_active:
         raise HTTPException(
             status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -172,9 +173,16 @@ async def _owner(settings: Settings, session: AsyncSession) -> User:
 
 
 async def get_optional_user(
-    conn: HTTPConnection, settings: SettingsDep, session: SessionDep, auth: AuthServiceDep
+    conn: HTTPConnection,
+    settings: SettingsDep,
+    factory: SessionFactoryDep,
+    auth: AuthServiceDep,
 ) -> User | None:
     """¿Quién hace la petición? (Etapa 11)
+
+    Usa una sesión de base de datos CORTA (se abre, consulta y se cierra). Con `SessionDep`
+    la conexión quedaba ocupada mientras durara la petición; en un WebSocket eso es todo el
+    tiempo que la página está abierta, y con varias pestañas se acababan las 10 conexiones.
 
     1. El agente de voz de este PC: `Authorization: Bearer <data/agent.token>` → el dueño.
     2. Con el inicio de sesión apagado (`AUTH_ENABLED=false`): el dueño.
@@ -187,15 +195,16 @@ async def get_optional_user(
         and header.startswith("Bearer ")
         and secrets.compare_digest(header[7:].encode(), agent_token.encode())
     ):
-        return await _owner(settings, session)
+        return await _owner(settings, factory)
     if not settings.auth_enabled:
-        return await _owner(settings, session)
+        return await _owner(settings, factory)
     if auth is None:
         return None
     found = auth.read(conn.cookies.get(SESSION_COOKIE))
     if found is None:
         return None
-    user = await UserRepository(session).get(found.user_id)
+    async with factory() as session:
+        user = await UserRepository(session).get(found.user_id)
     return user if user is not None and user.is_active else None
 
 
