@@ -245,8 +245,8 @@ async def test_mientras_busca_en_documentos_lo_dice_y_lo_muestra():
 async def test_al_terminar_la_frase_de_espera_sigue_atendiendo():
     agent = VoiceAgent(None, FakeClient(), FakePlayer())
     agent.conversation.attending()
-    async with agent._busy:  # la respuesta todavía no llega
-        agent.on_player_idle()
+    agent._answering = True  # la respuesta todavía está llegando
+    agent.on_player_idle()
     assert agent.conversation.mode == Mode.ATENDIENDO
 
 
@@ -342,3 +342,51 @@ def test_utilidades_de_audio():
     assert rate == 22050 and len(audio) == 2205
     chime = tone([440, 880], note_ms=50)
     assert chime.dtype == np.int16 and len(chime) == 2 * int(22050 * 0.05)
+
+
+async def test_termina_de_hablar_mientras_transcribe_una_frase_del_cuarto():
+    """El error del 26 oct: la pantalla quedó en "Hablando" para siempre. El parlante
+    terminó justo mientras el agente transcribía una frase ajena (sin "Jarvis"), y el
+    aviso de "terminé" se descartaba porque el agente estaba "ocupado"."""
+    import asyncio
+
+    release = asyncio.Event()
+
+    class SlowClient(FakeClient):
+        async def transcribe(self, wav: bytes) -> str:
+            await release.wait()
+            return "y entonces le dije que no"  # conversación del cuarto, sin "Jarvis"
+
+    player, notes = FakePlayer(playing=True), Notes()
+    agent = VoiceAgent(None, SlowClient(), player, notify=notes)
+    agent.conversation.speaking("Le recomiendo un buen ajiaco.")
+
+    task = asyncio.create_task(agent.handle(UTTERANCE))
+    await asyncio.sleep(0)  # el agente está transcribiendo la frase del cuarto
+    assert agent.busy
+    player.playing = False  # el parlante termina justo ahora…
+    agent.on_player_idle()  # …y avisa
+    release.set()
+    assert await task == "ignorada"
+
+    assert notes.states[-1] == "en_espera"
+    assert agent.conversation.mode != Mode.HABLANDO
+
+
+def test_el_vigilante_corrige_un_estado_trabado():
+    agent, notes = VoiceAgent(None, FakeClient(), FakePlayer(), notify=Notes()), None
+    notes = agent.notify
+    agent.conversation.speaking("Hola.")  # dice "hablando" pero no suena nada
+    assert not agent.check_stuck(now=100.0)  # primera vez: empieza a contar
+    assert not agent.check_stuck(now=101.0)  # 1 s: todavía no
+    assert agent.check_stuck(now=103.5)  # 3,5 s en silencio: lo corrige
+    assert notes.states[-1] == "en_espera"
+    assert not agent.check_stuck(now=110.0)  # ya está bien
+
+
+def test_el_vigilante_no_interrumpe_una_respuesta_en_curso():
+    player = FakePlayer(playing=True)
+    agent = VoiceAgent(None, FakeClient(), player, notify=Notes())
+    agent.conversation.speaking("Una frase larga…")
+    assert not agent.check_stuck(now=0.0)
+    assert not agent.check_stuck(now=60.0)  # sigue sonando: no se toca

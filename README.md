@@ -86,6 +86,7 @@ flowchart LR
 | 01 | [Requisitos de hardware y memoria](docs/01-requisitos-de-hardware.md) |
 | 02 | [Acceso desde otros dispositivos de la casa](docs/02-acceso-desde-la-red-local.md) |
 | 03 | [Etapas del proyecto y entregables](docs/03-etapas-del-proyecto.md) |
+| — | [Registro de incidentes](docs/incidentes.md): errores reales, causa y solución |
 | 04 | [Instalación paso a paso](docs/04-instalacion-paso-a-paso.md) |
 
 ## Hoja de ruta

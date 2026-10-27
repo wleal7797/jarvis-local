@@ -22,7 +22,7 @@ from typing import Any, Protocol
 
 import numpy as np
 
-from agents.voice.conversation import Conversation
+from agents.voice.conversation import Conversation, Mode
 from agents.voice.player import CHIME_ERROR
 from agents.voice.segmenter import to_wav_bytes
 from agents.voice.wake import NameDetector, mentions_name_at_start
@@ -80,6 +80,10 @@ class VoiceAgent:
         # Se dice mientras busca en los documentos (tarda ~10 s): así se sabe que está en ello.
         self.searching_wav = searching_wav
         self._busy = asyncio.Lock()
+        # True sólo mientras llega la respuesta a una pregunta de verdad. (No basta con
+        # `busy`: también es True mientras transcribe cualquier frase que oye en el cuarto.)
+        self._answering = False
+        self._stuck_since: float | None = None
         self.last_timings: dict[str, float] = {}
 
     @property
@@ -123,61 +127,70 @@ class VoiceAgent:
                     self.player.stop()
                     self.conversation.interrupted()
                     status("Interrumpido: le escucho.")
-            self.conversation.attending()
-            self.player.chime()
-
-            if text is None:
-                status("Le escucho…")
-                self.notify("escuchando", "")
-                try:
-                    text = await self._transcribe(utterance)
-                except Exception as exc:
-                    logger.warning("no se pudo transcribir", extra={"error": str(exc)})
-                    return self._failed("error")
-                timings["transcribir"] = time.perf_counter() - started
-            if not text:
-                return self._failed("vacía")
-
-            status(f"Usted: {text}")
-            status("Pensando…")
-            self.notify("pensando", text)
-            answer: list[str] = []
+            self._answering = True
             try:
-                async for event in self.client.chat(text, self.conversation.conversation_id):
-                    kind = event["type"]
-                    if kind == "start":
-                        self.conversation.started_conversation(event["conversation_id"])
-                    elif kind == "searching":
-                        self.notify("buscando", text)
-                        if self.searching_wav:
-                            self.conversation.speaking(SEARCHING_PHRASE)
-                            self.player.enqueue(self.searching_wav, SEARCHING_PHRASE)
-                    elif kind == "token":
-                        answer.append(event["content"])
-                    elif kind == "audio":
-                        if "primera voz" not in timings:
-                            timings["primera voz"] = time.perf_counter() - started
-                            self.notify("hablando", text)
-                        self.conversation.speaking(event.get("text", ""))
-                        self.player.enqueue(event["wav"], event.get("text", ""))
-                    elif kind == "error":
-                        self.player.chime(CHIME_ERROR)
+                return await self._answer(utterance, text, started, timings)
+            finally:
+                self._answering = False
+                if not self.player.playing:
+                    self.on_player_idle_now()
+
+    async def _answer(
+        self, utterance: np.ndarray, text: str | None, started: float, timings: dict[str, float]
+    ) -> str:
+        """Le hablaron a él: transcribe (si hace falta), pregunta y habla."""
+        self.conversation.attending()
+        self.player.chime()
+
+        if text is None:
+            status("Le escucho…")
+            self.notify("escuchando", "")
+            try:
+                text = await self._transcribe(utterance)
             except Exception as exc:
-                logger.warning("falló el chat", extra={"error": str(exc)})
+                logger.warning("no se pudo transcribir", extra={"error": str(exc)})
                 return self._failed("error")
-            status(f"JARVIS: {''.join(answer).strip()}")
-            status(
-                "   tiempos desde que dejó de hablar: "
-                + " · ".join(f"{name} {seconds:.1f} s" for name, seconds in timings.items())
-            )
-            self.last_timings = timings
-            if not self.player.playing:
-                self.on_player_idle_now()
-            return "respondida"
+            timings["transcribir"] = time.perf_counter() - started
+        if not text:
+            return self._failed("vacía")
+
+        status(f"Usted: {text}")
+        status("Pensando…")
+        self.notify("pensando", text)
+        answer: list[str] = []
+        try:
+            async for event in self.client.chat(text, self.conversation.conversation_id):
+                kind = event["type"]
+                if kind == "start":
+                    self.conversation.started_conversation(event["conversation_id"])
+                elif kind == "searching":
+                    self.notify("buscando", text)
+                    if self.searching_wav:
+                        self.conversation.speaking(SEARCHING_PHRASE)
+                        self.player.enqueue(self.searching_wav, SEARCHING_PHRASE)
+                elif kind == "token":
+                    answer.append(event["content"])
+                elif kind == "audio":
+                    if "primera voz" not in timings:
+                        timings["primera voz"] = time.perf_counter() - started
+                        self.notify("hablando", text)
+                    self.conversation.speaking(event.get("text", ""))
+                    self.player.enqueue(event["wav"], event.get("text", ""))
+                elif kind == "error":
+                    self.player.chime(CHIME_ERROR)
+        except Exception as exc:
+            logger.warning("falló el chat", extra={"error": str(exc)})
+            return self._failed("error")
+        status(f"JARVIS: {''.join(answer).strip()}")
+        status(
+            "   tiempos desde que dejó de hablar: "
+            + " · ".join(f"{name} {seconds:.1f} s" for name, seconds in timings.items())
+        )
+        self.last_timings = timings
+        return "respondida"
 
     def _failed(self, result: str) -> str:
         self.player.chime(CHIME_ERROR)
-        self.on_player_idle_now()
         return result
 
     def on_player_idle_now(self) -> None:
@@ -188,12 +201,34 @@ class VoiceAgent:
 
     def on_player_idle(self) -> None:
         """La llama el reproductor cuando termina de hablar."""
-        if self.busy:  # terminó "Un momento, lo consulto", pero la respuesta aún no llega
+        if self._answering:
+            # Terminó una frase (o "Un momento, lo consulto") pero la respuesta sigue
+            # llegando: al terminarla, `handle` revisa si ya se calló.
             return
-        self.conversation.finished_speaking()
+        self.on_player_idle_now()
         seconds = self.conversation.settings.follow_up_seconds
         if seconds > 0:
-            self.notify("atento", "")
             status(f"Le sigo escuchando {seconds:.0f} s…")
-        else:
-            self.notify("en_espera", "")
+
+    def check_stuck(self, now: float | None = None, after_seconds: float = 3.0) -> bool:
+        """Vigilante: si dice "hablando" o "atendiendo" pero ya no suena nada ni está
+        respondiendo hace más de 3 s, vuelve a "en espera". El bucle del micrófono lo llama
+        todo el tiempo. Devuelve True si tuvo que corregir el estado."""
+        now = time.monotonic() if now is None else now
+        stuck = (
+            self.conversation.mode in (Mode.HABLANDO, Mode.ATENDIENDO)
+            and not self._answering
+            and not self.player.playing
+        )
+        if not stuck:
+            self._stuck_since = None
+            return False
+        if self._stuck_since is None:
+            self._stuck_since = now
+            return False
+        if now - self._stuck_since < after_seconds:
+            return False
+        self._stuck_since = None
+        logger.warning("estado trabado corregido", extra={"modo": self.conversation.mode.value})
+        self.on_player_idle_now()
+        return True
