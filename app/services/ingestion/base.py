@@ -4,7 +4,7 @@ from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
-USER_AGENT = "JARVIS-local/0.1 (asistente personal sin fines comerciales; +https://github.com/wleal7797/jarvis-local)"
+USER_AGENT = "JARVIS-local/1.0 (asistente personal sin fines comerciales; +https://github.com/wleal7797/jarvis-local)"
 
 
 @dataclass
