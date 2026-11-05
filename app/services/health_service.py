@@ -6,6 +6,7 @@ from collections.abc import Awaitable, Callable
 
 import httpx
 
+from app.core import odiseo
 from app.core.config import Settings
 from app.schemas.health import DependencyHealth, HealthOut
 
@@ -34,6 +35,7 @@ class HealthService:
             app=self._settings.app_name,
             version=self._settings.app_version,
             environment=self._settings.environment,
+            odiseo=odiseo.is_active(),
             dependencies=dependencies,
         )
 

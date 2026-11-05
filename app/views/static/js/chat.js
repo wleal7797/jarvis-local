@@ -373,7 +373,7 @@
       const body = await response.json();
       const deps = body.dependencies || {};
       const down = Object.keys(deps).filter((k) => deps[k].status !== "up");
-      if (body.status === "ok") setStatus("ok", "En línea");
+      if (body.status === "ok") setStatus("ok", body.odiseo ? "Listo · sin internet" : "En línea");
       else setStatus("degraded", "Sin " + down.map((d) => (d === "ollama" ? "modelo" : "base de datos")).join(" ni "));
     } catch (_) {
       setStatus("down", "Sin conexión");

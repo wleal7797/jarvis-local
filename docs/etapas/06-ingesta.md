@@ -81,7 +81,7 @@ sequenceDiagram
 | **Modo `--gpu`** para la noche | La GPU vectoriza **4 veces más rápido** (0,36 s contra 1,41 s por fragmento), pero ocupa la VRAM del chat |
 | Tareas interrumpidas **vuelven a la cola** al reiniciar el worker | Apagar el PC a mitad de una tarea no la pierde; los documentos ya guardados no se repiten (hash) |
 | Un documento con error **no detiene** la tarea | Se registra y se sigue con el siguiente |
-| `INGESTION_ALLOW_INTERNET=false` | Interruptor para trabajar 100 % sin conexión |
+| `INGESTION_ALLOW_INTERNET=false` | Interruptor para trabajar 100 % sin conexión (desde la v1.0, el Protocolo Odiseo lo deja siempre apagado) |
 
 ## Resultado
 

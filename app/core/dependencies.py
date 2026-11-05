@@ -301,7 +301,7 @@ def get_ingestion_service(settings: SettingsDep, factory: SessionFactoryDep) -> 
     return IngestionService(
         factory,
         uploads_dir=Path(settings.uploads_dir),
-        allow_internet=settings.ingestion_allow_internet,
+        allow_internet=settings.ingestion_allow_internet and not settings.odiseo,
     )
 
 

@@ -53,6 +53,7 @@ def _page(
             "app_version": settings.app_version,
             "user": user,
             "auth_enabled": settings.auth_enabled,
+            "odiseo": settings.odiseo,
         },
     )
 

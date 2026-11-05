@@ -29,9 +29,14 @@
       <h2 id="add-title">Agregar conocimiento</h2>
       <div class="tabs" role="tablist">
         <button class="tab" role="tab" aria-selected="true" aria-controls="panel-file" id="tab-file" type="button">Archivo</button>
+        {% if not odiseo %}
         <button class="tab" role="tab" aria-selected="false" aria-controls="panel-web" id="tab-web" type="button">Página web</button>
         <button class="tab" role="tab" aria-selected="false" aria-controls="panel-wiki" id="tab-wiki" type="button">Wikipedia</button>
+        {% endif %}
       </div>
+      {% if odiseo %}
+      <p class="hint" id="odiseo-hint">Protocolo Odiseo activo: JARVIS no se conecta a internet. Para enseñarle algo de una página web, guárdela (o imprímala como PDF) y súbala como archivo.</p>
+      {% endif %}
 
       <form class="tab-panel" id="panel-file" role="tabpanel" aria-labelledby="tab-file">
         <label class="drop" id="drop">
@@ -44,6 +49,7 @@
         <button class="btn btn--primary" type="submit" id="file-submit" disabled>Subir e indexar</button>
       </form>
 
+      {% if not odiseo %}
       <form class="tab-panel" id="panel-web" role="tabpanel" aria-labelledby="tab-web" hidden>
         <label class="field">Dirección de la página
           <input type="url" id="web-url" placeholder="https://…" required>
@@ -70,6 +76,7 @@
         <p class="hint">Wikipedia en español · licencia CC BY-SA 4.0 · ~10 fragmentos por artículo.</p>
         <button class="btn btn--primary" type="submit">Agregar</button>
       </form>
+      {% endif %}
       <p class="form-message" id="form-message" role="status" aria-live="polite"></p>
     </section>
 

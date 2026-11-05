@@ -51,7 +51,10 @@ class OpenWakeWordDetector:
             from openwakeword.model import Model
             from openwakeword.utils import download_models
 
-            download_models(["hey_jarvis"])
+            from app.core.config import get_settings
+
+            if not get_settings().odiseo:  # con Odiseo los modelos ya deben estar en el PC
+                download_models(["hey_jarvis"])
             model = Model(wakeword_models=["hey_jarvis"], inference_framework="onnx")
         self._model = model
         self._threshold = threshold
