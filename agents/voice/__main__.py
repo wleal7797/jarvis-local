@@ -26,6 +26,7 @@ from agents.voice.conversation import Conversation, ConversationSettings, Mode
 from agents.voice.player import Player
 from agents.voice.segmenter import FRAME_SAMPLES, SAMPLE_RATE, UtteranceSegmenter
 from agents.voice.wake import OpenWakeWordDetector
+from app.core import odiseo
 from app.core.config import get_settings
 from app.core.logging import setup_logging
 
@@ -121,7 +122,9 @@ async def run(args: argparse.Namespace) -> None:
     status("Cargando filtro de voz y dejando listos Whisper, la voz y el modelo…")
     # Precarga en la API: así la primera frase no espera a que se carguen los modelos.
     warmup = asyncio.create_task(client.warm(prefill=True))
-    download_models(["hey_jarvis"])  # modelos base de openWakeWord (incluye Silero VAD)
+    if not settings.odiseo:
+        download_models(["hey_jarvis"])  # modelos base de openWakeWord (incluye Silero VAD)
+    # Con Odiseo no se descarga nada: los modelos ya están en el PC desde la instalación.
     vad = VAD()
     detector, name_from_text = await asyncio.to_thread(build_detector, args.detector)
     conversation = Conversation(ConversationSettings(follow_up_seconds=args.seguir))
@@ -282,6 +285,7 @@ def main() -> None:
         list_devices()
         return
     setup_logging("WARNING")
+    odiseo.apply(get_settings().odiseo)  # Protocolo Odiseo: sin conexiones hacia fuera
     lock = None if args.simular else single_instance_lock()
     if lock is None and not args.simular:
         status("Ya hay un agente de voz encendido. Apáguelo antes de abrir otro.")

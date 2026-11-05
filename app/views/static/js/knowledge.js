@@ -39,7 +39,8 @@
 
   // ---------- Pestañas ----------
 
-  const tabs = ["file", "web", "wiki"];
+  // Con el Protocolo Odiseo la página no trae las pestañas de web ni Wikipedia.
+  const tabs = ["file", "web", "wiki"].filter((name) => $("tab-" + name));
   tabs.forEach((name) => {
     $("tab-" + name).addEventListener("click", () => {
       tabs.forEach((other) => {
@@ -85,7 +86,7 @@
 
   // ---------- Web ----------
 
-  $("panel-web").addEventListener("submit", async (e) => {
+  if ($("panel-web")) $("panel-web").addEventListener("submit", async (e) => {
     e.preventDefault();
     const body = { url: $("web-url").value.trim(), max_pages: Number($("web-pages").value) || 1 };
     await submit(() => postJson("/api/knowledge/web", body), "Página en cola.");
@@ -93,7 +94,7 @@
 
   // ---------- Wikipedia ----------
 
-  $("panel-wiki").addEventListener("submit", async (e) => {
+  if ($("panel-wiki")) $("panel-wiki").addEventListener("submit", async (e) => {
     e.preventDefault();
     const titles = $("wiki-titles").value.split("\n").map((t) => t.trim()).filter(Boolean);
     const category = $("wiki-category").value.trim() || null;

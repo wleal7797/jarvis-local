@@ -20,6 +20,7 @@ from pathlib import Path
 import httpx
 import psutil
 
+from app.core import odiseo
 from app.core.config import get_settings
 from app.core.database import create_engine, create_session_factory
 from app.core.logging import setup_logging
@@ -85,12 +86,13 @@ async def unload_chat_model(http: httpx.AsyncClient, base_url: str, model: str) 
 
 async def run(use_gpu: bool, once: bool, poll_seconds: float) -> None:
     settings = get_settings()
+    odiseo.apply(settings.odiseo)  # Protocolo Odiseo: sin conexiones hacia fuera
     engine = create_engine(settings.database_url())
     factory = create_session_factory(engine)
     service = IngestionService(
         factory,
         uploads_dir=Path(settings.uploads_dir),
-        allow_internet=settings.ingestion_allow_internet,
+        allow_internet=settings.ingestion_allow_internet and not settings.odiseo,
     )
     stop = asyncio.Event()
     for sig in (signal.SIGINT, signal.SIGTERM):

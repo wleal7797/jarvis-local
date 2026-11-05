@@ -91,7 +91,7 @@ Al minuto, el vigilante entregó el recordatorio al agente de voz, que dijo **"S
 | Agente de voz completo ("Hola Jarvis, ¿qué hora es?") | ✅ |
 | **Intentos de salir a internet** | **0** |
 
-(La ingesta de páginas web y Wikipedia, Etapa 6, sí usa internet por diseño; se apaga con `INGESTION_ALLOW_INTERNET=false`.)
+(La ingesta de páginas web y Wikipedia, Etapa 6, sí usa internet por diseño; se apaga con `INGESTION_ALLOW_INTERNET=false`. Desde el Protocolo Odiseo queda apagada siempre.)
 
 ## Pruebas
 `tests/test_tools.py` (33): horas como las dice la gente, "en 10 minutos" bien calculado, horas imposibles, cuándo ofrecer herramientas, avisos aislados por usuario y guardados si nadie está conectado, crear/listar/cancelar/avisar una sola vez, aviso tarde, un invitado no puede crear recordatorios, el chat usa la herramienta y la dice con sus palabras, sin pedido no se ofrecen, estado del PC, copias diarias y limpieza. **281 pruebas en total, sin avisos.**

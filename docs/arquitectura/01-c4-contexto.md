@@ -42,4 +42,4 @@ C4Context
 
 - Ninguna conversación sale del PC.
 - No hay APIs de terceros para el modelo de lenguaje, la voz ni los embeddings.
-- La única conexión saliente de JARVIS (descargar fuentes públicas) se puede desactivar con `INGESTION_ALLOW_INTERNET=false`.
+- JARVIS no tiene conexiones salientes: el [Protocolo Odiseo](../mejoras-v1.md#2-protocolo-odiseo-jarvis-no-se-conecta-a-la-red-2026-11-05) sólo le deja conectarse a este mismo PC.

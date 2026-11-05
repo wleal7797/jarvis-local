@@ -25,7 +25,10 @@ from app.services.knowledge_service import KnowledgeService
 
 logger = logging.getLogger(__name__)
 
-INTERNET_DISABLED = "La descarga desde internet está desactivada (INGESTION_ALLOW_INTERNET=false)."
+INTERNET_DISABLED = (
+    "Protocolo Odiseo: JARVIS no se conecta a internet. "
+    "Agregue el conocimiento como archivo (PDF, Word, HTML o texto)."
+)
 
 
 class IngestionError(RuntimeError):

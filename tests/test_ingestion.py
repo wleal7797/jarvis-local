@@ -310,7 +310,7 @@ async def test_cancelar_tarea(session_factory: async_sessionmaker, tmp_path: Pat
 
 async def test_sin_internet_no_se_encola_web(tmp_path: Path):
     service = IngestionService(None, uploads_dir=tmp_path, allow_internet=False)  # type: ignore[arg-type]
-    with pytest.raises(IngestionError, match="desactivada"):
+    with pytest.raises(IngestionError, match="Odiseo"):
         await service.enqueue_web("https://casa.test", 1)
 
 

@@ -19,4 +19,6 @@ class HealthOut(BaseModel):
     app: str
     version: str
     environment: str
+    # Protocolo Odiseo: True = este proceso no puede conectarse a la red.
+    odiseo: bool = False
     dependencies: dict[str, DependencyHealth]

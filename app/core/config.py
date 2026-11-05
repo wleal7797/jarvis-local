@@ -73,8 +73,12 @@ class Settings(BaseSettings):
     tts_length_scale: float = 1.0
     tts_idle_unload_seconds: int = 600
 
-    # Ingesta (Etapa 6). Apágalo para trabajar 100 % sin conexión.
-    ingestion_allow_internet: bool = True
+    # Protocolo Odiseo: JARVIS no se conecta a la red, aunque se lo ordenen (app/core/odiseo.py).
+    # Sólo se apaga editando .env (ODISEO=false) y reiniciando; nunca desde el chat.
+    odiseo: bool = True
+
+    # Ingesta (Etapa 6). Con Odiseo activo, la web y Wikipedia quedan apagadas siempre.
+    ingestion_allow_internet: bool = False
     uploads_dir: str = "data/uploads"
 
     # El dueño (lo crea scripts/seed.py). Con el inicio de sesión apagado, todos son él.

@@ -25,6 +25,7 @@ from app.controllers import (
     training_controller,
     voice_controller,
 )
+from app.core import odiseo
 from app.core.config import get_settings
 from app.core.database import create_engine, create_session_factory
 from app.core.keys import load_or_create
@@ -108,6 +109,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 def create_app() -> FastAPI:
     settings = get_settings()
     setup_logging(settings.log_level)
+    # Protocolo Odiseo: antes que nada, cerrar la salida a la red de este proceso.
+    odiseo.apply(settings.odiseo)
 
     app = FastAPI(
         title=f"{settings.app_name} API",
