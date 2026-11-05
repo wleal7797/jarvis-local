@@ -116,6 +116,7 @@ flowchart LR
 | 02 | [Acceso desde otros dispositivos de la casa](docs/02-acceso-desde-la-red-local.md) |
 | 03 | [Etapas del proyecto y entregables](docs/03-etapas-del-proyecto.md) |
 | — | [Registro de incidentes](docs/incidentes.md): errores reales, causa y solución |
+| — | [Mejoras adicionales a la V1](docs/mejoras-v1.md): voces propias y lo que venga después de la v1.0 |
 | 04 | [Instalación paso a paso](docs/04-instalacion-paso-a-paso.md) |
 
 ## Hoja de ruta
@@ -136,6 +137,8 @@ flowchart LR
 | 11 | Seguridad y acceso en la red local | ✅ [bitácora](docs/etapas/11-seguridad-red-local.md) |
 | 12 | Fine-tuning con LoRA | 🟡 [bitácora](docs/etapas/12-lora.md) · listo para entrenar en Colab |
 | 13 | Herramientas y versión 1.0 | ✅ [bitácora](docs/etapas/13-herramientas.md) |
+
+**Mejoras adicionales a la V1** ([detalle](docs/mejoras-v1.md)): voces propias (subir una voz de Piper desde *Voz de JARVIS*).
 
 ## Estructura del repositorio
 

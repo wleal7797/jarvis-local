@@ -37,10 +37,12 @@
       data.installed.forEach((v) => {
         const option = document.createElement("option");
         option.value = v.name;
-        option.textContent = v.speaker + " · " + (LANG[v.language] || v.language) + (v.quality ? " · " + v.quality : "");
+        const place = LANG[v.language] || v.language;
+        option.textContent = v.speaker + (place ? " · " + place : "") + (v.quality ? " · " + v.quality : "") + (v.custom ? " · propia" : "");
         option.selected = v.name === data.voice;
         select.appendChild(option);
       });
+      renderCustom(data.installed.filter((v) => v.custom), data.voice);
       speed.value = data.length_scale;
       if (effect) effect.value = data.effect || "ninguno";
       speedValue.textContent = describeSpeed(data.length_scale);
@@ -80,6 +82,85 @@
       show("No se pudo probar: " + err.message, true);
     }
   }
+
+  // ---------- Voces propias (sólo el dueño ve esta sección) ----------
+
+  const uploadBox = $("voice-upload");
+  const customList = $("custom-voices");
+
+  function renderCustom(voices, active) {
+    if (!customList) return;
+    customList.replaceChildren();
+    voices.forEach((v) => {
+      const li = document.createElement("li");
+      const label = document.createElement("span");
+      label.textContent = v.name + (v.name === active ? " (en uso)" : "");
+      li.appendChild(label);
+      if (v.name !== active) {
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.className = "link-btn link-btn--danger";
+        remove.textContent = "Quitar";
+        remove.addEventListener("click", async () => {
+          if (!confirm("¿Quitar la voz «" + v.name + "»? Se borran sus archivos.")) return;
+          const response = await fetch("/api/voice/voices/" + encodeURIComponent(v.name), { method: "DELETE" });
+          if (response.ok) { show("Voz quitada."); load(); }
+          else show((await response.json()).detail || "No se pudo quitar.", true);
+        });
+        li.appendChild(remove);
+      }
+      customList.appendChild(li);
+    });
+  }
+
+  function upload() {
+    const model = $("upload-model").files[0];
+    const config = $("upload-config").files[0];
+    if (!model || !config) {
+      show("Elija los dos archivos: el .onnx y el .onnx.json.", true);
+      return;
+    }
+    const form = new FormData();
+    form.append("model", model);
+    form.append("config", config);
+    form.append("name", $("upload-name").value.trim() || model.name);
+    const bar = $("upload-progress");
+    const button = $("upload-voice");
+    // XMLHttpRequest y no fetch: así se ve el avance de un archivo de ~100 MB.
+    const request = new XMLHttpRequest();
+    request.open("POST", "/api/voice/voices");
+    request.upload.addEventListener("progress", (event) => {
+      if (event.lengthComputable) bar.value = Math.round((event.loaded / event.total) * 100);
+      if (bar.value >= 100) show("Probando la voz…");
+    });
+    request.addEventListener("load", async () => {
+      button.disabled = false;
+      bar.hidden = true;
+      let body = {};
+      try { body = JSON.parse(request.responseText); } catch (_) { /* sin cuerpo */ }
+      if (request.status === 201) {
+        show("Voz «" + body.name + "» instalada (" + body.size_mb + " MB). Elíjala arriba y pulse Probar.");
+        $("upload-model").value = "";
+        $("upload-config").value = "";
+        $("upload-name").value = "";
+        await load();
+      } else {
+        show(typeof body.detail === "string" ? body.detail : "No se pudo instalar la voz.", true);
+      }
+    });
+    request.addEventListener("error", () => {
+      button.disabled = false;
+      bar.hidden = true;
+      show("Se cortó la subida.", true);
+    });
+    button.disabled = true;
+    bar.hidden = false;
+    bar.value = 0;
+    show("Subiendo…");
+    request.send(form);
+  }
+
+  if (uploadBox) $("upload-voice").addEventListener("click", upload);
 
   speed.addEventListener("input", () => (speedValue.textContent = describeSpeed(speed.value)));
   if (effect) effect.addEventListener("change", () => save().then(() => show("Efecto guardado. Pruébelo.")).catch((e) => show(e.message, true)));

@@ -8,6 +8,13 @@ class VoiceInfo(BaseModel):
     language: str
     speaker: str
     quality: str
+    custom: bool = False  # subida desde la app (se puede quitar)
+
+
+class VoiceUploadOut(BaseModel):
+    name: str
+    test_seconds: float
+    size_mb: float
 
 
 class VoiceSettingsOut(BaseModel):
