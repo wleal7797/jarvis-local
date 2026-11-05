@@ -12,6 +12,7 @@ Tres piezas:
 
 import asyncio
 import io
+import json
 import logging
 import re
 import threading
@@ -223,18 +224,29 @@ class PiperTTS:
     def loaded(self) -> bool:
         return self._voice is not None
 
-    def installed_voices(self) -> list[dict[str, str]]:
-        """Voces de Piper descargadas en `voices_dir` (cada una es un .onnx + su .json)."""
+    def installed_voices(self) -> list[dict[str, Any]]:
+        """Voces de Piper en `voices_dir` (cada una es un .onnx + su .json).
+
+        Idioma, nombre y calidad salen del .json; si no están, del nombre del archivo
+        (es_ES-davefx-medium). Las subidas desde la app vienen marcadas como `custom`."""
         voices = []
         for model in sorted(Path(self._cfg.voices_dir).glob("*.onnx")):
-            name = model.stem  # es_ES-davefx-medium
+            name = model.stem
             parts = name.split("-")
+            try:
+                config = json.loads(model.with_suffix(".onnx.json").read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                config = {}
+            custom = bool(config.get("jarvis_subida"))
             voices.append(
                 {
                     "name": name,
-                    "language": parts[0] if parts else "",
-                    "speaker": parts[1] if len(parts) > 1 else name,
-                    "quality": parts[2] if len(parts) > 2 else "",
+                    "language": (config.get("language") or {}).get("code")
+                    or (parts[0] if len(parts) > 1 and not custom else ""),
+                    "speaker": name if custom else (parts[1] if len(parts) > 1 else name),
+                    "quality": (config.get("audio") or {}).get("quality")
+                    or (parts[2] if len(parts) > 2 else ""),
+                    "custom": custom,
                 }
             )
         return voices

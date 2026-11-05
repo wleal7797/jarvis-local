@@ -265,6 +265,7 @@ async def test_lista_voces_instaladas_y_cambia_en_caliente(tmp_path):
         "language": "es_MX",
         "speaker": "claude",
         "quality": "high",
+        "custom": False,  # descargada, no subida desde la app
     }
 
     await tts.synthesize("Primera frase de prueba.")

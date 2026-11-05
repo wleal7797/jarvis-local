@@ -15,6 +15,7 @@ from typing import Annotated
 from fastapi import (
     APIRouter,
     File,
+    Form,
     HTTPException,
     Response,
     UploadFile,
@@ -28,6 +29,7 @@ from app.core.dependencies import (
     LLMDep,
     MemberDep,
     OwnerDep,
+    SettingsDep,
     SpeechToTextDep,
     TextToSpeechDep,
     VoiceStatusDep,
@@ -40,11 +42,13 @@ from app.schemas.voice import (
     TranscriptionOut,
     VoiceSettingsIn,
     VoiceSettingsOut,
+    VoiceUploadOut,
     WarmOut,
 )
 from app.services.llm import LLMError
 from app.services.stt_service import TranscriptionError
 from app.services.tts_service import SpeechError
+from app.services.voice_library import VoiceLibrary, VoiceUploadError
 
 logger = logging.getLogger(__name__)
 
@@ -185,3 +189,48 @@ async def voice_status_socket(websocket: WebSocket, user: OwnerDep, hub: VoiceSt
         pass
     finally:
         hub.unsubscribe(queue)
+
+
+# ---------- Voces propias (mejora adicional a la V1) ----------
+
+
+@router.post(
+    "/voices",
+    response_model=VoiceUploadOut,
+    status_code=status.HTTP_201_CREATED,
+    summary="Subir una voz de Piper (.onnx + .onnx.json). Sólo el dueño",
+)
+async def upload_voice(
+    owner: OwnerDep,
+    settings: SettingsDep,
+    model: Annotated[UploadFile, File(description="El modelo de la voz: <nombre>.onnx")],
+    config: Annotated[UploadFile, File(description="Su configuración: <nombre>.onnx.json")],
+    name: Annotated[str, Form(description="Cómo se llamará la voz")] = "",
+):
+    if not (model.filename or "").lower().endswith(".onnx"):
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "El modelo debe ser un .onnx")
+    if not (config.filename or "").lower().endswith(".json"):
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT, "La configuración debe ser .json"
+        )
+    library = VoiceLibrary(settings.tts_voices_dir)
+    config_bytes = await config.read(2 * 1024 * 1024)
+    try:
+        # Probar la voz tarda unos segundos (carga el modelo): fuera del hilo principal.
+        return await asyncio.to_thread(
+            library.install, name or model.filename or "", model.file, config_bytes
+        )
+    except VoiceUploadError as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from None
+
+
+@router.delete(
+    "/voices/{name}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Quitar una voz subida desde la app. Sólo el dueño",
+)
+async def delete_voice(name: str, owner: OwnerDep, settings: SettingsDep, tts: TextToSpeechDep):
+    try:
+        VoiceLibrary(settings.tts_voices_dir).remove(name, active=tts.voice_name)
+    except VoiceUploadError as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from None

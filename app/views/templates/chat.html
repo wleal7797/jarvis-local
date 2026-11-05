@@ -73,8 +73,32 @@
           <option value="pelicula_grave">Película grave · asistente de IA, tono más bajo</option>
         </select>
       </label>
-      <p class="hint">¿Más voces? En la terminal:<br><code>python -m scripts.download_tts_voices --list</code><br><code>python -m scripts.download_tts_voices --voice es_MX-claude-high</code></p>
       <p class="form-message" id="voice-message" role="status" aria-live="polite"></p>
+      {% if user.role == "owner" %}
+      <details class="voice-upload" id="voice-upload">
+        <summary>Agregar una voz propia</summary>
+        <p class="hint">
+          Una voz de <strong>Piper</strong> son <strong>dos archivos</strong> con el mismo nombre:
+          el modelo <code>.onnx</code> y su configuración <code>.onnx.json</code>
+          (por ejemplo <code>es_CO-mivoz-medium.onnx</code> y <code>es_CO-mivoz-medium.onnx.json</code>).
+          Hasta 300 MB. Antes de instalarla, JARVIS la prueba diciendo una frase.
+        </p>
+        <label class="field">Nombre
+          <input type="text" id="upload-name" maxlength="60" placeholder="mi-voz" autocomplete="off">
+        </label>
+        <label class="field">Modelo (.onnx)
+          <input type="file" id="upload-model" accept=".onnx">
+        </label>
+        <label class="field">Configuración (.onnx.json)
+          <input type="file" id="upload-config" accept=".json,application/json">
+        </label>
+        <progress id="upload-progress" max="100" value="0" hidden></progress>
+        <button class="btn" type="button" id="upload-voice">Subir y probar</button>
+        <ul class="custom-voices" id="custom-voices"></ul>
+        <p class="hint">¿Dónde conseguir voces? Ver <em>Mejoras adicionales a la V1</em> en la documentación.
+          No se puede subir una grabación (MP3 o WAV): una voz se entrena a partir de grabaciones.</p>
+      </details>
+      {% endif %}
       <div class="dialog__actions">
         <button class="btn" type="button" id="voice-test">Probar</button>
         <button class="btn btn--primary" type="submit" value="close">Listo</button>
