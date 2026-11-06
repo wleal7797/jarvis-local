@@ -66,6 +66,8 @@ class Settings(BaseSettings):
         "Conversación en español con Jarvis (se pronuncia Yarbis), el asistente de la casa."
     )
     stt_idle_unload_seconds: int = 300
+    # Segunda escucha del nombre (INC-04): evita que "¿Ya viste…?" lo despierte.
+    stt_confirm_name: bool = True
 
     # Texto a voz (Etapa 8). Voz elegida escuchando muestras.
     tts_voices_dir: str = "data/tts/piper"

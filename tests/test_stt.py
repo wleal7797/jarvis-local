@@ -247,3 +247,79 @@ async def test_la_transcripcion_sale_sin_lo_inventado():
 
     stt, _ = make_stt(HallucinatingModel())
     assert (await stt.transcribe(b"audio")).text == ""  # nada que empiece con "Jarvis"
+
+
+# ---------- Segunda escucha del nombre (INC-04) ----------
+
+
+class PromptBiasedModel(FakeWhisperModel):
+    """Con la pista oye "Jarvis"; sin ella, lo que de verdad se dijo."""
+
+    def __init__(self, with_prompt: str, without_prompt: str):
+        super().__init__()
+        self.with_prompt, self.without_prompt = with_prompt, without_prompt
+
+    def transcribe(self, audio, **kwargs):
+        self.calls.append(kwargs)
+        text = self.with_prompt if kwargs.get("initial_prompt") else self.without_prompt
+        return iter([SimpleNamespace(text=text)]), SimpleNamespace(language="es", duration=2.0)
+
+
+@pytest.mark.parametrize(
+    ("with_prompt", "without_prompt"),
+    [
+        (" Jarvis, está muy claro.", " Ya vi, está muy claro."),  # la frase que se vio
+        (" Jarvis, te lo dije.", " Ya viste, te lo dije."),
+        (" Jarvis, no tu papá.", " Ya vino tu papá."),
+        (" Jarvis está muy claro.", " Javi está muy claro."),
+    ],
+)
+async def test_ya_viste_no_despierta_a_jarvis(with_prompt: str, without_prompt: str):
+    from agents.voice.wake import mentions_name_at_start
+
+    stt, _ = make_stt(PromptBiasedModel(with_prompt, without_prompt))
+    text = (await stt.transcribe(b"audio")).text
+    assert text == without_prompt.strip()  # queda lo que de verdad se dijo
+    assert not mentions_name_at_start(text)
+
+
+@pytest.mark.parametrize(
+    "without_prompt",
+    [" Jarvis, ¿qué hora es?", " Yardis, ¿qué hora es?", " Hola, Jairis.", " Ya ris, qué hora"],
+)
+async def test_el_nombre_de_verdad_se_confirma(without_prompt: str):
+    stt, _ = make_stt(PromptBiasedModel(" Jarvis, ¿qué hora es?", without_prompt))
+    assert (await stt.transcribe(b"audio")).text == "Jarvis, ¿qué hora es?"
+
+
+async def test_sin_nombre_no_hay_segunda_escucha():
+    model = PromptBiasedModel(" ¿Qué hora es?", " ¿Qué hora es?")
+    stt, _ = make_stt(model)
+    await stt.transcribe(b"audio")
+    assert len(model.calls) == 1  # no cuesta nada en las frases normales
+
+
+async def test_la_segunda_escucha_se_puede_apagar():
+    model = PromptBiasedModel(" Jarvis, está muy claro.", " Ya vi, está muy claro.")
+    stt, _ = make_stt(model, confirm_name=False)
+    assert (await stt.transcribe(b"audio")).text == "Jarvis, está muy claro."
+    assert len(model.calls) == 1
+
+
+@pytest.mark.parametrize(
+    ("text", "sounds"),
+    [
+        ("Yarris, hola", True),
+        ("Jardiz no", True),
+        ("Hola Yadris", True),
+        ("Ya vi, está muy claro", False),
+        ("¿Ya viste el video?", False),
+        ("Ya ves qué hora es", False),
+        ("Ya, bueno", False),
+        ("", False),
+    ],
+)
+def test_que_suena_a_jarvis_sin_pista(text: str, sounds: bool):
+    from app.services.stt_service import sounds_like_name_at_start
+
+    assert sounds_like_name_at_start(text) is sounds

@@ -35,6 +35,46 @@ def normalize_name(text: str) -> str:
     return _NAME_VARIANTS.sub("Jarvis", text)
 
 
+# ---------- ¿La frase empieza llamando a JARVIS? ----------
+
+_NAME = re.compile(r"\bjarvis\b", re.IGNORECASE)
+# Sólo se le habla a JARVIS si la frase EMPIEZA con su nombre: "Jarvis, …".
+# Se acepta un saludo corto antes ("Hola Jarvis", "Oye Jarvis"), nada más.
+_GREETINGS = {"hola", "oye", "hey", "ey", "ok", "okay", "bueno"}
+_WORD = re.compile(r"[\wáéíóúñü]+", re.IGNORECASE)
+# Cómo escribe Whisper el nombre SIN la pista: "Yarris", "Yardis", "Jarris", "Yadris",
+# "Jairis", "Jardiz"… o partido en dos: "Ya ris". "Ya viste", "Ya vi", "Ya vino" o "Javi"
+# no suenan así y no cuentan.
+_NAME_SOUND = re.compile(r"[yjhl]{1,2}a(?:r{1,2}[bvdm]?|dr|ir)[iy][sz]", re.IGNORECASE)
+
+
+def _words_after_greeting(text: str) -> list[str]:
+    words = _WORD.findall(normalize_name(text))
+    if words and words[0].lower() in _GREETINGS:
+        words = words[1:]
+    return words
+
+
+def _first_word(text: str) -> str:
+    words = _words_after_greeting(text)
+    return words[0] if words else ""
+
+
+def mentions_name_at_start(text: str) -> bool:
+    """ "Jarvis, ¿qué hora es?" y "Hola Jarvis…" → sí.
+    "Le dije a Jarvis que…" o "¿Qué puerto usa JARVIS?" → no."""
+    return bool(_NAME.fullmatch(_first_word(text)))
+
+
+def sounds_like_name_at_start(text: str) -> bool:
+    """Para la segunda escucha (sin pista): ¿la primera palabra suena a "Jarvis"?"""
+    words = _words_after_greeting(text)
+    if not words:
+        return False
+    candidates = [words[0], "".join(words[:2])]
+    return bool(_NAME.fullmatch(words[0])) or any(_NAME_SOUND.fullmatch(c) for c in candidates)
+
+
 # ---------- Textos inventados (alucinaciones de Whisper) ----------
 #
 # Con audio que parece voz pero no tiene palabras claras (TV lejana, una tos, un murmullo)
@@ -114,6 +154,11 @@ class WhisperSettings:
         "Conversación en español con Jarvis (se pronuncia Yarbis), el asistente de la casa."
     )
     idle_unload_seconds: int = 300
+    # Segunda escucha del nombre (INC-04): con la pista, Whisper convierte "¿Ya viste…?",
+    # "Ya vi…" o "Ya vino…" en "Jarvis, …". Si la frase parece empezar con el nombre, se
+    # vuelve a escuchar el comienzo SIN pista: si ahí no está el nombre, no era para él.
+    confirm_name: bool = True
+    confirm_seconds: float = 3.0
 
 
 def _ollama_cuda_dir() -> str | None:
@@ -188,27 +233,18 @@ class FasterWhisperSTT:
                 logger.info("cargando Whisper", extra={"model": self._cfg.model})
                 self._model = self._factory(self._cfg)
             try:
-                segments, info = self._model.transcribe(
-                    io.BytesIO(audio),
-                    language=self._cfg.language,
-                    beam_size=1,
-                    vad_filter=True,
-                    condition_on_previous_text=False,
-                    initial_prompt=self._cfg.initial_prompt,
-                )
+                text, info = self._decode(io.BytesIO(audio), self._cfg.initial_prompt)
                 if info.duration > MAX_AUDIO_SECONDS:
                     raise TranscriptionError(f"El audio supera {MAX_AUDIO_SECONDS} segundos")
-                kept = []
-                for segment in segments:
-                    reason = invented(segment, self._cfg.initial_prompt or "")
-                    if reason:
-                        logger.info(
-                            "texto inventado descartado",
-                            extra={"text": segment.text.strip()[:80], "reason": reason},
-                        )
-                    else:
-                        kept.append(segment.text.strip())
-                text = normalize_name(" ".join(kept).strip())
+                if self._needs_second_listen(text) and not self._name_confirmed(audio):
+                    # El "Jarvis" lo puso la pista: se transcribe de nuevo sin ella, que
+                    # además es lo que de verdad se dijo ("Ya viste…").
+                    plain, _ = self._decode(io.BytesIO(audio), None)
+                    logger.info(
+                        "nombre no confirmado: la frase no era para JARVIS",
+                        extra={"con_pista": text[:60], "sin_pista": plain[:60]},
+                    )
+                    text = plain
             except TranscriptionError:
                 raise
             except Exception as exc:  # audio dañado o formato desconocido
@@ -231,6 +267,45 @@ class FasterWhisperSTT:
                 },
             )
             return result
+
+    def _decode(self, audio: Any, prompt: str | None) -> tuple[str, Any]:
+        segments, info = self._model.transcribe(
+            audio,
+            language=self._cfg.language,
+            beam_size=1,
+            vad_filter=True,
+            condition_on_previous_text=False,
+            initial_prompt=prompt,
+        )
+        kept = []
+        for segment in segments:
+            reason = invented(segment, prompt or "")
+            if reason:
+                logger.info(
+                    "texto inventado descartado",
+                    extra={"text": segment.text.strip()[:80], "reason": reason},
+                )
+            else:
+                kept.append(segment.text.strip())
+        return normalize_name(" ".join(kept).strip()), info
+
+    def _needs_second_listen(self, text: str) -> bool:
+        return bool(self._cfg.confirm_name and self._cfg.initial_prompt) and (
+            mentions_name_at_start(text)
+        )
+
+    def _name_confirmed(self, audio: bytes) -> bool:
+        """Escucha sólo el comienzo, sin pista: ¿sigue sonando a "Jarvis"?"""
+        start: Any = io.BytesIO(audio)
+        try:
+            from faster_whisper import decode_audio
+
+            samples = decode_audio(io.BytesIO(audio))
+            start = samples[: int(16000 * self._cfg.confirm_seconds)]
+        except Exception:  # sin faster-whisper (pruebas) o formato raro: el audio entero
+            pass
+        plain, _ = self._decode(start, None)
+        return sounds_like_name_at_start(plain)
 
     def warm(self) -> None:
         """Carga el modelo si hace falta y reinicia la cuenta de inactividad."""
