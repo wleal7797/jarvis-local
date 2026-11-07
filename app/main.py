@@ -57,6 +57,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             threads=settings.stt_threads,
             initial_prompt=settings.stt_initial_prompt,
             idle_unload_seconds=settings.stt_idle_unload_seconds,
+            confirm_name=settings.stt_confirm_name,
         )
     )
     # La voz elegida desde la app (data/preferences.json) gana sobre la del .env.

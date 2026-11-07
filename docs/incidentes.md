@@ -55,3 +55,18 @@ Errores que aparecieron usando JARVIS de verdad: qué se vio, por qué pasó, c�
 | **Corrección** | Antes de usar cada segmento que transcribe Whisper, se descarta si: **copia 4 palabras seguidas de la pista** · es una **frase típica inventada** (suscríbete, subtítulos, gracias por ver…) · **no parece voz** (`no_speech_prob` > 0,6) · o es **dudoso y poco seguro** (> 0,35 y `avg_logprob` < −0,8). Cada descarte queda en `logs/api.log` como `texto inventado descartado`. |
 | **Verificado** | Ruido parecido a voz: **0 activaciones** (antes 4 de 4 tipos inventaban texto). Las 23 frases reales grabadas en las Etapas 7 y 9: **0 cambiadas** por el filtro. |
 | **Pruebas** | `tests/test_stt.py`: `test_descarta_lo_que_whisper_inventa` (incluye la frase exacta que se vio), `test_no_descarta_frases_reales` (por ejemplo "¿cómo se pronuncia croissant?"), `test_descarta_segmentos_que_no_parecen_voz`, `test_la_transcripcion_sale_sin_lo_inventado`. |
+
+---
+
+## INC-04 · Se activaba sin decir "Jarvis": "¿Ya viste…?" (05‑nov‑2026)
+
+| | |
+|---|---|
+| **Síntoma** | Con conversación en el cuarto, JARVIS respondía aunque nadie lo hubiera llamado. |
+| **Evidencia** | `logs/voz.log`: varias frases de la conversación de la casa transcritas como si **empezaran** con *"Jarvis, …"*, seguidas de palabras que no eran para él. (No se copian aquí: son conversaciones de la casa.) |
+| **Causa raíz** | Para reconocer bien el nombre, Whisper recibe una pista: *"Conversación en español con Jarvis (se pronuncia Yarbis)…"*. Expresiones que **suenan** parecido al comienzo de una frase (**"¿Ya viste…?"**, **"Ya vi…"**, **"Ya vino…"**) Whisper las escribía como "Jarvis" por culpa de esa pista, y como la frase "empezaba con Jarvis", el agente se activaba. No es un texto inventado (INC-03): sí hubo voz, pero se oyó mal. |
+| **Reproducción** | Con 4 voces de Piper, con y sin ruido: *"Ya vi, está muy claro"* → *"Jarvis, está muy claro"*, *"Ya viste, te lo dije"* → *"Jarvis, te lo dije"*, *"Ya vino tu papá"* → *"Jarvis, no tu papá"*. **Sin la pista**, Whisper escribe lo que de verdad se dijo. Las grabaciones reales diciendo "Jarvis" se reconocen igual con y sin pista. |
+| **Corrección** | **Segunda escucha del nombre.** Cuando la frase parece empezar con "Jarvis", se vuelven a transcribir sus primeros 3 s **sin la pista**. Si ahí la primera palabra suena a Jarvis ("Jarvis", "Yardis", "Yarris", "Jairis", "Ya ris"…), se acepta; si es "Ya viste", "Ya vi", "Javi"…, no era para él: se usa la transcripción sin pista (la correcta) y no se activa. Queda en `logs/api.log` como `nombre no confirmado`. Las frases que no empiezan con el nombre no pagan nada extra. |
+| **Ajuste** | `STT_CONFIRM_NAME=true` en `.env` (por defecto). Si alguna vez no responde al llamarlo, diga "Jarvis" claro y con una pausa corta. |
+| **Verificado** | Whisper real, 192 frases sin el nombre (incluidas las de "ya viste"), con y sin ruido: falsas activaciones **3 → 0**. Las 8 grabaciones reales que empiezan con "Jarvis": **8 de 8** siguen activándolo. Costo: ~0,1 s más sólo cuando lo llaman. Con las voces sintéticas, que pronuncian "Jarvis" con jota española ("Ya ves…"), a veces ya no se activa: es el precio de no confundirlo con "ya viste". |
+| **Pruebas** | `tests/test_stt.py`: `test_ya_viste_no_despierta_a_jarvis` (incluye la frase que se vio; falla con el código anterior), `test_el_nombre_de_verdad_se_confirma`, `test_sin_nombre_no_hay_segunda_escucha`, `test_la_segunda_escucha_se_puede_apagar`, `test_que_suena_a_jarvis_sin_pista`. |
