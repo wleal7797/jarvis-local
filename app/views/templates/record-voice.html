@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}Grabar mi voz · {{ app_name }}{% endblock %}
+
+{% block body %}
+<div class="page">
+  <header class="page__header">
+    <a class="icon-btn" href="/" aria-label="Volver al chat">
+      <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>
+    </a>
+    <div class="page__heading">
+      <h1>Grabar mi voz</h1>
+      <p>Lea cada frase en voz alta. Con estas grabaciones se entrena una voz propia para JARVIS.</p>
+    </div>
+    <button class="icon-btn" id="toggle-theme" type="button" aria-label="Cambiar tema claro u oscuro">
+      <svg class="icon-sun" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      <svg class="icon-moon" aria-hidden="true" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+    </button>
+  </header>
+
+  <main class="page__body">
+    <section class="stats" aria-label="Avance">
+      <div class="stat"><span class="stat__value" id="stat-recorded">–</span><span class="stat__label">frases grabadas</span></div>
+      <div class="stat"><span class="stat__value" id="stat-minutes">–</span><span class="stat__label">minutos de voz</span></div>
+      <div class="stat"><span class="stat__value" id="stat-goal">–</span><span class="stat__label">de la meta (60 min)</span></div>
+    </section>
+
+    <section class="card rec" id="rec-card" aria-labelledby="rec-title">
+      <div class="card__head">
+        <h2 id="rec-title">Frase <span id="rec-index">–</span> de <span id="rec-total">–</span></h2>
+        <span class="rec__done" id="rec-done" hidden>✓ grabada</span>
+      </div>
+      <p class="rec__phrase" id="rec-phrase" aria-live="polite">Cargando…</p>
+      <div class="row rec__controls">
+        <button class="btn btn--primary" id="rec-button" type="button">● Grabar</button>
+        <button class="btn" id="rec-play" type="button" disabled>▶ Escuchar</button>
+        <button class="btn btn--danger" id="rec-delete" type="button" disabled>Borrar</button>
+      </div>
+      <div class="row rec__nav">
+        <button class="btn" id="rec-prev" type="button">← Anterior</button>
+        <button class="btn" id="rec-next" type="button">Siguiente →</button>
+        <button class="btn" id="rec-pending" type="button">Siguiente sin grabar</button>
+      </div>
+      <p class="form-message" id="rec-message" role="status" aria-live="polite"></p>
+      <p class="hint">Atajos: <kbd>Espacio</kbd> grabar / detener · <kbd>→</kbd> siguiente · <kbd>←</kbd> anterior · <kbd>R</kbd> escuchar.</p>
+    </section>
+
+    <section class="card" aria-labelledby="tips-title">
+      <h2 id="tips-title">Para que la voz quede bien</h2>
+      <ul class="how">
+        <li><strong>Lugar:</strong> un cuarto silencioso y sin eco (un clóset con ropa funciona muy bien). Sin TV, música ni ventilador.</li>
+        <li><strong>Siempre igual:</strong> el mismo micrófono, a la misma distancia (un palmo), con el mismo tono y la misma energía.</li>
+        <li><strong>El estilo es el que usted grabe:</strong> si quiere una voz grave, pausada y elegante, léala así desde la primera frase.</li>
+        <li><strong>Lea la frase tal cual está escrita.</strong> Si se equivoca, vuelva a grabarla.</li>
+        <li><strong>Cuánto:</strong> unos 20–30 minutos ya dan una voz que se entiende; 60 minutos o más, una voz natural. Se puede grabar en varias sesiones.</li>
+        <li>Sólo grabe su propia voz, o la de alguien que esté de acuerdo.</li>
+      </ul>
+    </section>
+
+    <section class="card" aria-labelledby="export-title">
+      <h2 id="export-title">Entrenar la voz</h2>
+      <p class="hint">Cuando tenga suficiente, descargue las grabaciones y súbalas al cuaderno de Google Colab <code>training/notebooks/jarvis_voz_piper.ipynb</code>. Al terminar, suba los dos archivos que entrega (<code>.onnx</code> y <code>.onnx.json</code>) en <em>Voz de JARVIS › Agregar una voz propia</em>.</p>
+      <div class="row">
+        <a class="btn btn--primary" id="rec-export" href="/api/voice/dataset/export.zip" download>Descargar grabaciones (.zip)</a>
+      </div>
+      <p class="hint">Las grabaciones quedan en <code>data/voz-propia</code> de este PC y nunca van a Git.</p>
+    </section>
+  </main>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/theme.js?v={{ v }}"></script>
+<script src="/static/js/record-voice.js?v={{ v }}"></script>
+{% endblock %}

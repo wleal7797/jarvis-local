@@ -24,6 +24,7 @@ from app.controllers import (
     reminder_controller,
     training_controller,
     voice_controller,
+    voice_dataset_controller,
 )
 from app.core import odiseo
 from app.core.config import get_settings
@@ -148,6 +149,7 @@ def create_app() -> FastAPI:
     app.include_router(knowledge_controller.router)
     app.include_router(voice_controller.router)
     app.include_router(voice_controller.ws_router)
+    app.include_router(voice_dataset_controller.router)
     app.include_router(training_controller.router)
     app.include_router(reminder_controller.router)
     app.include_router(reminder_controller.ws_router)

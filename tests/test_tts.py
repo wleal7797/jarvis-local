@@ -331,3 +331,34 @@ def test_pelicula_grave_baja_el_tono_sin_cambiar_la_duracion():
     with wave.open(io.BytesIO(lower_pitch(buffer.getvalue(), factor))) as w:
         # Se estira; como Piper habló `factor` veces más rápido, la duración final no cambia.
         assert w.getnframes() == int(rate * factor)
+
+
+def test_ia_cine_es_mas_grave_y_agrega_sala():
+    import numpy as np
+
+    from app.services.tts_service import EFFECTS, apply_effect, pitch_factor, room_response
+
+    assert "ia_cine" in EFFECTS
+    assert pitch_factor("ia_cine") > pitch_factor("pelicula_grave") > 1.0
+
+    rate = 22050
+    tone_ = np.zeros(rate, np.int16)
+    tone_[: rate // 4] = (np.sin(np.arange(rate // 4) * 2 * np.pi * 220 / rate) * 8000).astype(
+        np.int16
+    )
+    buffer = io.BytesIO()
+    with wave.open(buffer, "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(rate)
+        w.writeframes(tone_.tobytes())
+
+    def tail_energy(effect: str) -> float:
+        with wave.open(io.BytesIO(apply_effect(buffer.getvalue(), effect))) as w:
+            audio = np.frombuffer(w.readframes(w.getnframes()), np.int16).astype(np.float32)
+            assert w.getnframes() == rate  # misma duración
+        return float(np.sum(audio[rate // 4 + rate // 10 :] ** 2))
+
+    # Después de que el tono termina, sólo con la sala sigue sonando algo.
+    assert tail_energy("ia_cine") > 10 * (tail_energy("pelicula") + 1)
+    assert np.array_equal(room_response(rate), room_response(rate))  # siempre igual, sin azar

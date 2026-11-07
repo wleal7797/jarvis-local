@@ -69,6 +69,9 @@ class Settings(BaseSettings):
     # Segunda escucha del nombre (INC-04): evita que "¿Ya viste…?" lo despierte.
     stt_confirm_name: bool = True
 
+    # Grabar mi voz: frases leídas por el dueño para entrenar una voz propia (nunca a Git).
+    voice_dataset_dir: str = "data/voz-propia"
+
     # Texto a voz (Etapa 8). Voz elegida escuchando muestras.
     tts_voices_dir: str = "data/tts/piper"
     tts_voice: str = "es_ES-davefx-medium"
