@@ -103,14 +103,35 @@ class SentenceSplitter:
 
 # ---------- Efecto "película" ----------
 
-EFFECTS = ("ninguno", "pelicula", "pelicula_grave")
+EFFECTS = ("ninguno", "pelicula", "pelicula_grave", "ia_cine")
 # "pelicula_grave": la voz 2 semitonos más grave, a la misma velocidad.
 GRAVE_SEMITONES = -2.0
 
 
-def pitch_factor(effect: str, semitones: float = GRAVE_SEMITONES) -> float:
+@dataclass(frozen=True)
+class EffectSpec:
+    """Cómo suena cada efecto. Ninguno imita a un actor: es "sonido de IA de película"."""
+
+    semitones: float = 0.0  # negativo = más grave
+    metal: float = 1.0  # brillo metálico (copias a 7 y 13 ms); 0 = nada
+    room: float = 0.0  # sala (reverberación corta); 0 = nada
+    highpass_hz: float = 150.0
+
+
+EFFECT_SPECS = {
+    "pelicula": EffectSpec(),
+    "pelicula_grave": EffectSpec(semitones=GRAVE_SEMITONES),
+    # "IA de cine": más grave, metálico suave y una sala amplia, como si hablara la casa.
+    "ia_cine": EffectSpec(semitones=-3.0, metal=0.6, room=0.22, highpass_hz=110.0),
+}
+
+
+def pitch_factor(effect: str, semitones: float | None = None) -> float:
     """Cuánto se estira el audio para bajar el tono (1.0 = igual)."""
-    return 2 ** (-semitones / 12) if effect == "pelicula_grave" else 1.0
+    spec = EFFECT_SPECS.get(effect)
+    if spec is None or not spec.semitones:
+        return 1.0
+    return 2 ** (-(spec.semitones if semitones is None else semitones) / 12)
 
 
 def lower_pitch(wav: bytes, factor: float) -> bytes:
@@ -137,14 +158,29 @@ def lower_pitch(wav: bytes, factor: float) -> bytes:
     return out.getvalue()
 
 
-def apply_effect(wav: bytes, effect: str) -> bytes:
+def room_response(rate: int, seconds: float = 0.45, seed: int = 7) -> Any:
+    """Respuesta de una sala amplia (ruido que se apaga): siempre la misma, sin azar."""
+    import numpy as np
+
+    n = int(rate * seconds)
+    rng = np.random.default_rng(seed)
+    tail = rng.standard_normal(n).astype(np.float32) * np.exp(-np.arange(n) / (rate * 0.09))
+    tail[: int(rate * 0.012)] = 0  # primeros 12 ms: el sonido directo
+    # Más apagada en agudos, como una sala de verdad (media móvil corta).
+    tail = np.convolve(tail, np.ones(6, np.float32) / 6, mode="same")
+    return tail / (np.sqrt(np.sum(tail**2)) or 1.0)
+
+
+def apply_effect(wav: bytes, effect: str, spec: EffectSpec | None = None) -> bytes:
     """Le da a la voz el sonido de asistente de película, sin imitar a ningún actor.
 
     - Quita graves (filtro paso alto ~150 Hz): voz más limpia, "de altavoz".
     - Dos copias muy cercanas (7 y 13 ms): un brillo metálico suave, de máquina.
     - Dos ecos cortos (40 y 65 ms): como si hablara en una sala amplia.
+    - `ia_cine` agrega una sala (reverberación corta) y baja más el tono.
     """
-    if effect not in ("pelicula", "pelicula_grave"):
+    spec = spec or EFFECT_SPECS.get(effect)
+    if spec is None:
         return wav
     import numpy as np
 
@@ -155,12 +191,20 @@ def apply_effect(wav: bytes, effect: str) -> bytes:
         return wav
     from scipy.signal import lfilter
 
-    alpha = 1.0 / (1.0 + 2 * np.pi * 150 / rate)  # paso alto de un polo (~150 Hz)
+    alpha = 1.0 / (1.0 + 2 * np.pi * spec.highpass_hz / rate)  # paso alto de un polo
     high = lfilter([alpha, -alpha], [1.0, -alpha], audio).astype(np.float32)
     mixed = high.copy()
-    for delay_ms, gain in ((7, 0.35), (13, 0.25), (40, 0.18), (65, 0.10)):
+    taps = ((7, 0.35 * spec.metal), (13, 0.25 * spec.metal), (40, 0.18), (65, 0.10))
+    for delay_ms, gain in taps:
         shift = int(rate * delay_ms / 1000)
-        mixed[shift:] += gain * high[:-shift]
+        if gain:
+            mixed[shift:] += gain * high[:-shift]
+    if spec.room:
+        from scipy.signal import fftconvolve
+
+        wet = fftconvolve(mixed, room_response(rate))[: mixed.size].astype(np.float32)
+        level = (np.sqrt(np.mean(mixed**2)) or 1.0) / (np.sqrt(np.mean(wet**2)) or 1.0)
+        mixed = mixed + spec.room * level * wet
     peak = float(np.max(np.abs(mixed))) or 1.0
     mixed *= min(1.0, 30000.0 / peak)
     out = io.BytesIO()

@@ -88,6 +88,11 @@ async def users_page(request: Request, settings: SettingsDep, user: OptionalUser
     return _page(request, settings, user, "users.html", ("owner",))
 
 
+@router.get("/grabar-voz", response_class=HTMLResponse)
+async def record_voice_page(request: Request, settings: SettingsDep, user: OptionalUserDep):
+    return _page(request, settings, user, "record-voice.html", ("owner",))
+
+
 @router.get("/", response_class=HTMLResponse)
 async def chat_page(request: Request, settings: SettingsDep, user: OptionalUserDep):
     return _page(request, settings, user, "chat.html")

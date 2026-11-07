@@ -30,7 +30,8 @@ class VoiceSettingsIn(BaseModel):
         default=None, ge=0.5, le=2.0, description="1.0 normal · >1 más despacio · <1 más rápido"
     )
     effect: str | None = Field(
-        default=None, description='"ninguno" o "pelicula" (sonido de asistente de película)'
+        default=None,
+        description='"ninguno", "pelicula", "pelicula_grave" o "ia_cine" (IA de película)',
     )
 
 

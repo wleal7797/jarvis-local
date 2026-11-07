@@ -606,3 +606,12 @@ button.nav-link { width: 100%; background: none; border: 0; text-align: left; cu
 .custom-voices { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 13px; }
 .custom-voices:empty { display: none; }
 .custom-voices li { display: flex; justify-content: space-between; gap: 8px; }
+
+/* ---------- Grabar mi voz ---------- */
+.rec__phrase { font-size: clamp(20px, 4.5vw, 28px); line-height: 1.4; margin: 8px 0 20px; min-height: 2.8em; }
+.rec__done { color: var(--accent); font-size: 14px; }
+.rec__controls, .rec__nav { margin-bottom: 12px; }
+.rec.is-recording .rec__phrase { color: var(--accent); }
+#rec-button.is-recording { background: var(--danger); border-color: var(--danger); }
+.btn.is-disabled { opacity: 0.5; }
+kbd { font: inherit; font-size: 12px; padding: 1px 6px; border: 1px solid currentColor; border-radius: 4px; opacity: 0.8; }
